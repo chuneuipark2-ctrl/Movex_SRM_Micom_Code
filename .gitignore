@@ -1,0 +1,17 @@
+# STM32 CubeIDE build outputs
+Debug/
+Release/
+
+# Object / binary artifacts
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.su
+*.cyclo
+*.d
+
+# Node (manual generator optional deps)
+docs/manual/node_modules/

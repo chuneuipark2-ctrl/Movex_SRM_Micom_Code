@@ -1,0 +1,4304 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<title>SRM 구조체 멤버 용도 사전</title><style>
+    body { font-family: "Malgun Gothic", sans-serif; font-size: 11pt; line-height: 1.5; margin: 2cm; color: #111; }
+    h1 { font-size: 20pt; border-bottom: 2px solid #333; padding-bottom: 8px; }
+    h2 { font-size: 15pt; margin-top: 28px; color: #1a4; page-break-before: always; }
+    h2:first-of-type { page-break-before: avoid; }
+    h3 { font-size: 12pt; margin-top: 18px; color: #333; }
+    .note { background: #f5f5f5; padding: 10px; border-left: 4px solid #1a4; margin: 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 20px; font-size: 10pt; }
+    th { background: #2c3e50; color: #fff; padding: 8px; text-align: left; }
+    td { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; }
+    tr:nth-child(even) { background: #fafafa; }
+    .path { font-family: Consolas, monospace; font-size: 9pt; color: #066; }
+    .toc a { text-decoration: none; color: #066; }
+    @media print { h2 { page-break-before: always; } }
+  </style></head><body><h1>MX SRM — 구조체 멤버 용도 사전</h1>
+<p>생성일: 2026-06-16 | Ver 4.4 | <b>구조체 변수 → 멤버 → 실제 용도</b></p>
+<div class="note">이 문서는 함수 사전이 아닙니다. <b>m_St / m_pgmEnv / m_WorkData / m_BKSram</b> 멤버가 코드에서 무엇에 쓰이는지 정리했습니다.<br>
+PDF 저장: 브라우저에서 이 HTML 열기 → 인쇄 → "PDF로 저장"</div>
+<h2 id="toc">목차</h2><ul class="toc"><li><a href="#m_St">m_St — 지상반 상태보고 (0x30 응답 본체)</a> (253항목)</li><li><a href="#m_pgmEnv">m_pgmEnv — MCU 내부 런타임 환경</a> (332항목)</li><li><a href="#m_WorkData">m_WorkData — 현재 사이클 작업 데이터 (내부 큐)</a> (29항목)</li><li><a href="#m_BKSram">m_BKSram — 정전 복구용 BKPSRAM 미러</a> (78항목)</li><li><a href="#WorkCmdSTR">WorkCmdSTR — TML 0x41 수신 작업명령</a> (17항목)</li></ul><h2 id="m_St">m_St — 지상반 상태보고 (0x30 응답 본체)</h2><div class="note">지상반/WCS가 폴링하는 운전 상태. Save_* 함수가 여기와 m_BKSram에 동시 기록하는 경우 많음.</div><table><thead><tr>
+      <th style="width:28%">멤버 경로</th>
+      <th style="width:10%">타입</th>
+      <th style="width:22%">헤더 주석</th>
+      <th style="width:25%">실제 용도</th>
+      <th style="width:15%">사용 파일</th>
+    </tr></thead><tbody><tr>
+        <td class="path">m_St.DeviceType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved0</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.ProtocolVer</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_St.PgmVer</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_St.SysTime</td>
+        <td>INT32U</td>
+        <td>UTC Time</td>
+        <td>UTC Time</td>
+        <td>alarm.c, com_tml.c, Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_St.ProjectID</td>
+        <td>ProjectID_t</td>
+        <td>-</td>
+        <td>주로 읽기: SRM_Parameter.c — 조건 분기/판단에 사용.</td>
+        <td>SRM_Parameter.c</td>
+      </tr><tr>
+        <td class="path">m_St.ProjectID.ProjectNo</td>
+        <td>INT08U[6]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.ProjectID.Group_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.ProjectID.Device_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.MachineType</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.CP_Mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, main.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.CP_State</td>
+        <td>ControlPanelSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.CP_State.Bit</td>
+        <td>ControlPanelSTR_Bit</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.CP_State.Data</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.InterLock_CVOK</td>
+        <td>INT08U[8]</td>
+        <td>포크 구동가능</td>
+        <td>스테이션 CV OK 인터록. 포크 구동 허가.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.InterLock_CVNO</td>
+        <td>INT08U[8]</td>
+        <td>CV 구동금지</td>
+        <td>CV 구동금지</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode</td>
+        <td>DeviceMode_t</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Auto</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Manual</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Force</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Setup</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Reserved0</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Reserved1</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Reserved2</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Mode.Bit.Reserved3</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1</td>
+        <td>DeviceStatus1</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.StartOn</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>지상반 Start ON(0x50). 1=운전 시작 요청 상태.</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.EmergencyStop</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>비상정지 상태 비트. 지상반 표시 + 동작 차단.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.Warning</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>alarm.c, dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.Fault</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.InvertorConnect</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.RequestWork</td>
+        <td>bit:1</td>
+        <td>Bit5,	작업요구</td>
+        <td>Bit5,	작업요구</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.Reserved1</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status1.Bit.Reserved2</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2</td>
+        <td>DeviceStatus2</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.HomePos</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.MaintanencePos</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.Reserved2</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.Reserved3</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.Reserved4</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.Reserved5</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.ManualSW</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_Status2.Bit.EmergencySW</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.SRM_OperationCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_dsp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MainErrCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>메인 에러코드(ERROR1_*). 지상반 알람 번호.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.SubErrCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ErrReason</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1</td>
+        <td>ForkPosInfo</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.St_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Bay_No</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Level_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Fork_PosNo</td>
+        <td>INT08S</td>
+        <td>0: Center, 1: Left, 2: Right</td>
+        <td>0: Center, 1: Left, 2: Right</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1</td>
+        <td>PositionFlag1</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.Trav_Left</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.LiftUp_Left</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.LiftDown_Left</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.Trav_Right</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.LiftUp_Right</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position1.Bit.LiftDown_Right</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2</td>
+        <td>PositionFlag2</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkCenter</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkLeft1</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkLeft2</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkLeft3</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkRight1</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkRight2</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.ForkRight3</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Position2.Bit.Reserved0</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork1.Row_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2</td>
+        <td>ForkPosInfo</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.St_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Bay_No</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Level_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Fork_PosNo</td>
+        <td>INT08S</td>
+        <td>0: Center, 1: Left, 2: Right</td>
+        <td>0: Center, 1: Left, 2: Right</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1</td>
+        <td>PositionFlag1</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.Trav_Left</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.LiftUp_Left</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.LiftDown_Left</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.Trav_Right</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>dev_SRM.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.LiftUp_Right</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position1.Bit.LiftDown_Right</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2</td>
+        <td>PositionFlag2</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkCenter</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkLeft1</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkLeft2</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkLeft3</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkRight1</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkRight2</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.ForkRight3</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Position2.Bit.Reserved0</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.PosFork2.Row_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork1</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork1.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork1.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork1.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork1.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved1</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork2</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork2.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork2.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork2.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TargetFork2.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved2</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved3</td>
+        <td>INT08U[11]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St</td>
+        <td>DriveStatus[4]</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1</td>
+        <td>DriveStatus1</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.MoveFlag</td>
+        <td>bit:1</td>
+        <td>Bit0, 0: Stop</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.AccelState</td>
+        <td>bit:1</td>
+        <td>Bit2, 0: Stop</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.DecelState</td>
+        <td>bit:1</td>
+        <td>Bit1, 0: Stop</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.MoveDirection</td>
+        <td>bit:1</td>
+        <td>Bit3, 0: Forward</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.InPosition</td>
+        <td>bit:1</td>
+        <td>Bit4, 1: Complete</td>
+        <td>정위치 도달. PREPARE_MOVE에서 이동 스킵 판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.GoodsFlag_Or_MoveHome</td>
+        <td>bit:1</td>
+        <td>Bit5, 주행, 승강 홈복귀</td>
+        <td>포크=화물적재, 주행/승강=홈복귀(레거시). 축 맥락 필수.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.ForkOut_Left_OK</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.ForkOut_Right_OK</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.IPOS_ref</td>
+        <td>bit:1</td>
+        <td>Bit5, 1: Complete</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.ForwardDecelationArea</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status1.ReverseDecelationArea</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2</td>
+        <td>DriveStatus2</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Connect</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Alarm</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.IPOS_ref</td>
+        <td>bit:1</td>
+        <td>Bit2, 1: Complete</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Tuning_Noload</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Tuning_load</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Reserved0</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.IO_Control</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Status2.Com_Control</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].U</td>
+        <td>MULTI_FUNC_VAL_1</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].U.Loaded_GoodType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].U.Forward_Decel_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Reverse_Decel_No_Or_Gox</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Current_Pos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Current_Vel</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Target_Pos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Inv_St[i].Target_Vel</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>인버터 4축 상태(주행/승강/포크1/2).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork</td>
+        <td>WorkInfoSTR[2]</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].WorkNum_Fork</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].Task_Index</td>
+        <td>INT08U</td>
+        <td>0 : It's not task work</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].From_Cell_Fork</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].From_Cell_Fork.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].From_Cell_Fork.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].From_Cell_Fork.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].From_Cell_Fork.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Fork</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Fork.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Fork.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Fork.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Fork.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].OrderCode_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].OrderStatus_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 상태(대기/진행/완료). Save_Fork*가 m_St에 기록.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].OrderProcess_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 진행 단계(세부 스텝). 지상반 폴링용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].WorkNum_Move</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Move</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Move.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Move.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Move.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].To_Cell_Move.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>포크별 작업 From/To/상태. 0x30 응답 포함.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].OrderStatus_Move</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 상태(대기/진행/완료). Save_Fork*가 m_St에 기록.</td>
+        <td>alarm.c, dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.ForkWork[i].OrderProcess_Move</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 진행 단계(세부 스텝). 지상반 폴링용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Transfer_WorkNo</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.Task_Operation</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved4</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork</td>
+        <td>TaskCommand[MAX_TASK_COUNT]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].Cmd</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].LoadFactor</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].WorkForkNo</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].TargetPos</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].TargetPos.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].TargetPos.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].TargetPos.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].TargetPos.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].GoodsType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].OrderState</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.TaskWork[i].Reserved</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Digital_Input</td>
+        <td>INT08U[20]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.Digital_Output</td>
+        <td>INT08U[9]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.ManualOutputMode</td>
+        <td>INT08U[5]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.InvErrorCode</td>
+        <td>InvErrCode_Str</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.InvErrorCode.Inverter</td>
+        <td>InvErrCode[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_St.InvErrorCode.Inverter[i].MainError</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.InvErrorCode.Inverter[i].SubError</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.ManualOutputMode2</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Reserved5</td>
+        <td>INT08U[3]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar</td>
+        <td>Lidar_Str</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L</td>
+        <td>LidarStatus</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L.Detect1</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L.Detect2</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L.Detect3</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L.Fault</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_L.Select_Zone</td>
+        <td>bit:4</td>
+        <td>Bit4 - 7,</td>
+        <td>Bit4 - 7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R</td>
+        <td>LidarStatus</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R.Detect1</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R.Detect2</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R.Detect3</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R.Fault</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork1_R.Select_Zone</td>
+        <td>bit:4</td>
+        <td>Bit4 - 7,</td>
+        <td>Bit4 - 7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L</td>
+        <td>LidarStatus</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L.Detect1</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L.Detect2</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L.Detect3</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L.Fault</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_L.Select_Zone</td>
+        <td>bit:4</td>
+        <td>Bit4 - 7,</td>
+        <td>Bit4 - 7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R</td>
+        <td>LidarStatus</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R.Detect1</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R.Detect2</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R.Detect3</td>
+        <td>bit:1</td>
+        <td>Bit2,</td>
+        <td>Bit2,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R.Fault</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.Lidar.Fork2_R.Select_Zone</td>
+        <td>bit:4</td>
+        <td>Bit4 - 7,</td>
+        <td>Bit4 - 7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo</td>
+        <td>Maintanance_Info</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_setting_speed</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_setting_speed</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_setting_speed</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_setting_speed</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_setting_acceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_setting_acceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_setting_acceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_setting_acceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_setting_deceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_setting_deceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_setting_deceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_setting_deceleration</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_setting_jeck</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_setting_jerk</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_setting_jerk</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_setting_jerk</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_travel_lift_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_travel_lift_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_fork_extend_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_fork_extend_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_forking_lift_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_forking_lift_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_fork_fold_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.load_fork_fold_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_travel_lift_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_travel_lift_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_fork_extend_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_fork_extend_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_forking_lift_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_forking_lift_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_fork_fold_moving_before_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.unload_fork_fold_moving_after_delay</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_motor_torque</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_motor_torque</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_moter_torque</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_moter_torque</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.plc_operation_time</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_operation_time</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_operation_time</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_operation_time</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_operation_time</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.travel_brake_open_count</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.lift_brake_open_count</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork1_brake_open_count</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_St.MaintananceInfo.fork2_brake_open_count</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr></tbody></table><h2 id="m_pgmEnv">m_pgmEnv — MCU 내부 런타임 환경</h2><div class="note">지상반에 직접 안 나가는 내부 변수. RunMode(SRM_RunMode), 타이머, 통신링크, 플래그.</div><table><thead><tr>
+      <th style="width:28%">멤버 경로</th>
+      <th style="width:10%">타입</th>
+      <th style="width:22%">헤더 주석</th>
+      <th style="width:25%">실제 용도</th>
+      <th style="width:15%">사용 파일</th>
+    </tr></thead><tbody><tr>
+        <td class="path">m_pgmEnv.programRun</td>
+        <td>INT08U</td>
+        <td>0x01:Boot Program, 0x02:Downlog Program</td>
+        <td>0x01:Boot Program, 0x02:Downlog Program</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.timer100us</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.timer1ms</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info</td>
+        <td>DownloadInfo_t</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile</td>
+        <td>ExecFileSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.isFusing</td>
+        <td>INT08U[10]</td>
+        <td>-</td>
+        <td>주로 읽기: upgrade.c — 조건 분기/판단에 사용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.MadeBy</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.ProgramType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.DownloadType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.FileType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.TotalSize</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.SuccessSize</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.FileCrc</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.APP_ExecFile.DownloadBufPos</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile</td>
+        <td>ExecFileSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.isFusing</td>
+        <td>INT08U[10]</td>
+        <td>-</td>
+        <td>주로 읽기: upgrade.c — 조건 분기/판단에 사용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.MadeBy</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.ProgramType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.DownloadType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.FileType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.TotalSize</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.SuccessSize</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.FileCrc</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fw_Info.Buf_ExecFile.DownloadBufPos</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.downloadMode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c, com_udp.c, ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.downloadTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Download_port</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Download_Header</td>
+        <td>ComHeaderSTR</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Download_Header.Bypass</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DownloadSize</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.System_Reset_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txEthUdpComLen</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, com_udp.c, uart.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txEthUdpComBuffer</td>
+        <td>INT08U[FRAME_MAX_DATA_LEN]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c, uart.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txInvUdpComLen</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, fpgatcpipstack.c, uart.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txInvUdpComBuffer</td>
+        <td>INT08U[FRAME_MAX_DATA_LEN]</td>
+        <td>-</td>
+        <td>주로 쓰기: uart.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>uart.c, fpgatcpipstack.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DSPUdpDstIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>주로 읽기: com_dsp.c — 조건 분기/판단에 사용.</td>
+        <td>com_dsp.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DSPUdpDstPort</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_dsp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_dsp.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txDSPComLen</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, com_udp.c, uart.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.txDSPComBuffer</td>
+        <td>INT08U[FRAME_DSP_DATA_LEN]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c, uart.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TmlConnect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>지상반 TML 통신 연결 상태.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TmlConnectTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>지상반 TML 통신 연결 상태.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.UPLink</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c, com_dsp.c, ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.UPLinkInitFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c, com_dsp.c, ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.UDPConnect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.UDPConnectTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DSP_Connect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_dsp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_dsp.c, com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DSP_ConnectTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DownLink</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DownLinkInitFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.CellOffsetUseCount</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, SRM_Parameter.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.CellOffsetUseFlag</td>
+        <td>INT08U[4096]</td>
+        <td>-</td>
+        <td>주로 쓰기: SRM_Parameter.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>SRM_Parameter.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DeviceType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>main.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DeviceID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, main.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DOSt</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DISt</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InputFilterTime</td>
+        <td>INT32U[8]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.DeviceHwMode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SignalLamp</td>
+        <td>INT08U</td>
+        <td>0:Off, 1:RED, 2:GRN, 3:BLU</td>
+        <td>0:Off, 1:RED, 2:GRN, 3:BLU</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Buzzer</td>
+        <td>INT08U</td>
+        <td>0:Off, 1:On</td>
+        <td>0:Off, 1:On</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EtherCAT_Connection</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EtherCAT_DelayCount</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: ecat_combase.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>ecat_combase.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EtherCAT_MaxDelayCount</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: ecat_combase.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>ecat_combase.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EtherCAT_TimeOutCount</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: ecat_combase.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>ecat_combase.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeqCnt_X_Left</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeq_X_Left</td>
+        <td>INT32S[310]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeqCnt_Y_Left</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeq_Y_Left</td>
+        <td>INT32S[180]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeqCnt_X_Right</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeq_X_Right</td>
+        <td>INT32S[310]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeqCnt_Y_Right</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PosSeq_Y_Right</td>
+        <td>INT32S[180]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Pos_X_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Pos_Y_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Pos_X_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Pos_Y_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_Start_X_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_End_X_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_Start_Y_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_End_Y_Left</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_Start_X_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_End_X_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_Start_Y_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InPos_End_Y_Right</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_RunMode</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>상태머신 RunMode. dev_SRM.c switch(case)의 현재 단계.</td>
+        <td>com_tml.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_RunTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_TaskMode</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>TML 0x40 Task 배치 실행 모드. 0x41과 다름.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_TaskIndex</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.GraphData</td>
+        <td>INT32S[16]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ManualHmiCtrl</td>
+        <td>INT16U[20]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ManualHmiTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ServerLink</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ServerPeriodicTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PortLinkSt</td>
+        <td>INT08U[20]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.PortLinkTimer</td>
+        <td>INT32U[20]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TravBrakeTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.LiftBrakeTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.OrderRejectCondition</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.NowTravIhbOut</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.NowLiftIhbOut</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RemoconConnect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RemoconTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FlashUartDisable</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: upgrade.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FpgaNetReadInx</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FpgaNetRecvInx</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FpgaCatReadInx</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FpgaCatRecvInx</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: fpga.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.isFpgaRun</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, fpga.c, Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ManualCtrlMode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ManCtrTimeover</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.StartOnChange</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>지상반 Start ON(0x50). 1=운전 시작 요청 상태.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.StartOnChangeTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>지상반 Start ON(0x50). 1=운전 시작 요청 상태.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SysTime_1ms</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: ecat_main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SFlash_Install</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: FlashSST26.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>FlashSST26.c, Mcu_Test.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EtherCAT_DO</td>
+        <td>INT16U[10]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, ecat_main.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.NormalStopFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>정지(0x54) 요청 플래그.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.EmergencyStopFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>비상정지 상태 비트. 지상반 표시 + 동작 차단.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ForceForkStopFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Invertor_RxPDO_Size</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Invertor_TxPDO_Size</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Invertor_Com_Start</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Invertor_ComTimeOver</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.JogFlag</td>
+        <td>INT08U[3]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_ReferenceSet</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_Machine_State</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SRM_Complete_Machine_State</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.MX_DSP_ProtocolVer</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.MX_DSP_PgmVer</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.MX_DSP_Remocon</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Encoder_ComErr_Setting</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Encoder_ComDC_Setting</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Encoder_Dir_Setting</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Encoder_Input_Setting</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Read_Param_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Start_Off_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile</td>
+        <td>ProfileControl[3]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].remain_distance</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].dec_distance</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].Target_Reach</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].Oper_Time</td>
+        <td>INT32S[8]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].Oper_Timeout</td>
+        <td>INT32S[8]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].OperateTime</td>
+        <td>INT32S</td>
+        <td>프로파일 계산 주행시간</td>
+        <td>프로파일 계산 주행시간</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].Lag_Diff_Value</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR</td>
+        <td>ScurveProfileSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.control</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.vel_type</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.ward</td>
+        <td>INT08S</td>
+        <td>1:전진, -1:후진</td>
+        <td>1:전진, -1:후진</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, upgrade.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.index</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.start_timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.start_velocity</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.creep_velocity</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.target_velocity</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.StartPos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.TargetPos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.Move_Distance</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.max_velocity</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.acc</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.dec</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.acc_jerk</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.dec_jerk</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.acc_jerk_time</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.dec_jerk_time</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.acc_linear_time</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.dec_linear_time</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.constant_time</td>
+        <td>double</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.v</td>
+        <td>double[9]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.s</td>
+        <td>double[9]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.t</td>
+        <td>double[9]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.Cmd_postion</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Profile[i].CTR.Cmd_velocity</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Profile_Target_Reach</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Run_Fork_VelType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ForkProfile_Time</td>
+        <td>INT32S[8]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.ForkProfile_Timeout</td>
+        <td>INT32S[8]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_OperateTime</td>
+        <td>INT32S</td>
+        <td>프로파일 계산 주행시간</td>
+        <td>프로파일 계산 주행시간</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Home_Lamp_Flag</td>
+        <td>INT08U</td>
+        <td>원점 동작시 램프 동작</td>
+        <td>원점 동작시 램프 동작</td>
+        <td>dev_SRM.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Test_Mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Test_Position</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Alarm_LaserModem</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Alarm_DoorOpen</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Check_Home_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Move_Home_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>홈위치 이동(0x51) 명령 플래그.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Move_Maintanence_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Demo_Control</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Demo_Option</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.StatusReqCount</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_EmergencyStop</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>비상정지 상태 비트. 지상반 표시 + 동작 차단.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Orgin_Operate_Auto</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Orgin_Index</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Move_PosFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Manual_Fork_PositionFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Machine_Init_Fail</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RemoconKey</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_dsp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TravSSIError</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: Mcu_Test.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TravSSIRun</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.BarcodeContinueError</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: Mcu_Test.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>Mcu_Test.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.MCU_Test_Mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_Debug.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_Debug.c, Mcu_Test.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr</td>
+        <td>InvParamCom_t</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.RecvComPort</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.RecvHeader</td>
+        <td>ComHeaderSTR</td>
+        <td>-</td>
+        <td>주로 읽기: com_tml.c — 조건 분기/판단에 사용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.RecvHeader.Bypass</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.Mode</td>
+        <td>INT08U</td>
+        <td>1: Read, 2: Write</td>
+        <td>1: Read, 2: Write</td>
+        <td>com_Debug.c, com_tml.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.rData</td>
+        <td>InvParamData_t</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.rData.Drive</td>
+        <td>INT08U</td>
+        <td>1: Trav, 2: Lift, 3:Fork1</td>
+        <td>1: Trav, 2: Lift, 3:Fork1</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.rData.Main_Addr</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.rData.Sub_Addr</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.rData.Data</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.wData</td>
+        <td>InvParamData_t</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.wData.Drive</td>
+        <td>INT08U</td>
+        <td>1: Trav, 2: Lift, 3:Fork1</td>
+        <td>1: Trav, 2: Lift, 3:Fork1</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.wData.Main_Addr</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.wData.Sub_Addr</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InvParamCtr.wData.Data</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Trial_Run_Mode</td>
+        <td>INT08U</td>
+        <td>시운전 모드</td>
+        <td>시운전 모드</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Limit_Run_Mode</td>
+        <td>INT08U</td>
+        <td>리미트 운전 모드</td>
+        <td>리미트 운전 모드</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RecvModbusTCP_Time</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Bz_Force_Stop</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Debug_Fork_Control_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Debug_Fork_Control_NextStep</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Setup_Target_Pos</td>
+        <td>INT32S[3]</td>
+        <td>-</td>
+        <td>이동 목표 위치.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Buzzer_OneShot</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Buzzer_Online</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.MaxAcutalTouqe</td>
+        <td>INT16S[3]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Wirte_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Tset_ControlData</td>
+        <td>INT32U[2]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Enable_Setup_Move_Position</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Enable_Setup_Move_Position_Timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Project_Site_No</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Manual_Trav_Site_No</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Manual_Lift_Site_No</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Manual_SW_Change_Auto</td>
+        <td>INT08U</td>
+        <td>기상반 스위치 수동에서 자동으로 변경.</td>
+        <td>기상반 스위치 수동에서 자동으로 변경.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Encoder_Type</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>main.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Brake_Type</td>
+        <td>INT08U</td>
+        <td>0: SEW Brake Unit, 1:MC</td>
+        <td>0: SEW Brake Unit, 1:MC</td>
+        <td>main.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_Man_Control_Type</td>
+        <td>INT08U</td>
+        <td>0: Normal, 1:HKT TP2 GT</td>
+        <td>0: Normal, 1:HKT TP2 GT</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Station_Error_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Recv_CP_State</td>
+        <td>ControlPanelSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Recv_CP_State.Bit</td>
+        <td>ControlPanelSTR_Bit</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Recv_CP_State.Data</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator</td>
+        <td>Test_Simulator_t</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt</td>
+        <td>DriveStatus[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1</td>
+        <td>DriveStatus1</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.MoveFlag</td>
+        <td>bit:1</td>
+        <td>Bit0, 0: Stop</td>
+        <td>Bit0, 0: Stop</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.AccelState</td>
+        <td>bit:1</td>
+        <td>Bit2, 0: Stop</td>
+        <td>Bit2, 0: Stop</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.DecelState</td>
+        <td>bit:1</td>
+        <td>Bit1, 0: Stop</td>
+        <td>Bit1, 0: Stop</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.MoveDirection</td>
+        <td>bit:1</td>
+        <td>Bit3, 0: Forward</td>
+        <td>Bit3, 0: Forward</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.InPosition</td>
+        <td>bit:1</td>
+        <td>Bit4, 1: Complete</td>
+        <td>정위치 도달. PREPARE_MOVE에서 이동 스킵 판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.GoodsFlag_Or_MoveHome</td>
+        <td>bit:1</td>
+        <td>Bit5, 주행, 승강 홈복귀</td>
+        <td>포크=화물적재, 주행/승강=홈복귀(레거시). 축 맥락 필수.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.ForkOut_Left_OK</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.ForkOut_Right_OK</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.IPOS_ref</td>
+        <td>bit:1</td>
+        <td>Bit5, 1: Complete</td>
+        <td>Bit5, 1: Complete</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.ForwardDecelationArea</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status1.ReverseDecelationArea</td>
+        <td>bit:1</td>
+        <td>Bit7,</td>
+        <td>Bit7,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2</td>
+        <td>DriveStatus2</td>
+        <td>-</td>
+        <td>주로 읽기: com_tml.c — 조건 분기/판단에 사용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Connect</td>
+        <td>bit:1</td>
+        <td>Bit0,</td>
+        <td>Bit0,</td>
+        <td>com_dsp.c, com_tml.c, com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Alarm</td>
+        <td>bit:1</td>
+        <td>Bit1,</td>
+        <td>Bit1,</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.IPOS_ref</td>
+        <td>bit:1</td>
+        <td>Bit2, 1: Complete</td>
+        <td>Bit2, 1: Complete</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Tuning_Noload</td>
+        <td>bit:1</td>
+        <td>Bit3,</td>
+        <td>Bit3,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Tuning_load</td>
+        <td>bit:1</td>
+        <td>Bit4,</td>
+        <td>Bit4,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Reserved0</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.IO_Control</td>
+        <td>bit:1</td>
+        <td>Bit5,</td>
+        <td>Bit5,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Status2.Com_Control</td>
+        <td>bit:1</td>
+        <td>Bit6,</td>
+        <td>Bit6,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].U</td>
+        <td>MULTI_FUNC_VAL_1</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_Debug.c, com_dsp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].U.Loaded_GoodType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].U.Forward_Decel_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Reverse_Decel_No_Or_Gox</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Current_Pos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>현재 위치(엔코더/카운트).</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Current_Vel</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Target_Pos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>이동 목표 위치.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_InvSt[i].Target_Vel</td>
+        <td>INT16S</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Auto_Release_Timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.GCP_Change_Mode_Disable</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Goods_State_Mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.DI_Test_Mode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.DI_Test_State</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Manual_Mode</td>
+        <td>INT08U</td>
+        <td>기상반 모드 테스트</td>
+        <td>기상반 모드 테스트</td>
+        <td>com_tml.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Manual_Mode_Ctr</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Test_Mode</td>
+        <td>INT08U</td>
+        <td>인터락 테스트</td>
+        <td>인터락 테스트</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Test_Fork1_Left_Pos</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Test_Fork1_Right_Pos</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Test_ManualKey</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Test_EventKey</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.SRM_RunMode_Step</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>상태머신 RunMode. dev_SRM.c switch(case)의 현재 단계.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.SRM_Work_Index</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Enable</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control</td>
+        <td>SyncTravel_test</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.W</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B</td>
+        <td>MOVKIT_MAC_Control2_STR_Test</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_Member1</td>
+        <td>bit:1</td>
+        <td>Bit0, 1踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>Bit0, 1踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_Member2</td>
+        <td>bit:1</td>
+        <td>Bit1, 2踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>Bit1, 2踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_Member3</td>
+        <td>bit:1</td>
+        <td>Bit2, 3踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>Bit2, 3踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_Member4</td>
+        <td>bit:1</td>
+        <td>Bit3, 4踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>Bit3, 4踰� 硫ㅻ� MAC 鍮����깊��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Release_brake_without_enable_member1</td>
+        <td>bit:1</td>
+        <td>Bit4, 1踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>Bit4, 1踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Release_brake_without_enable_member2</td>
+        <td>bit:1</td>
+        <td>Bit5, 2踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>Bit5, 2踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Release_brake_without_enable_member3</td>
+        <td>bit:1</td>
+        <td>Bit6, 3踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>Bit6, 3踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Release_brake_without_enable_member4</td>
+        <td>bit:1</td>
+        <td>Bit7, 4踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>Bit7, 4踰� 硫ㅻ� 媛��� 釉����댄�� �댁��</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Deactivate_balance_controller</td>
+        <td>bit:1</td>
+        <td>Bit8, 諛몃�곗�� ���� 鍮����깊��</td>
+        <td>Bit8, 諛몃�곗�� ���� 鍮����깊��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_position_controller</td>
+        <td>bit:1</td>
+        <td>Bit9, �ъ��� 而⑦�몃· 鍮����깊��</td>
+        <td>Bit9, �ъ��� 而⑦�몃· 鍮����깊��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Disable_Skew_error</td>
+        <td>bit:1</td>
+        <td>Bit10, Skew ���� 鍮����깊��</td>
+        <td>Bit10, Skew ���� 鍮����깊��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Allow_skew_compensation</td>
+        <td>bit:1</td>
+        <td>Bit11, Skewing 湲곗�멸린 洹��� ���깊��</td>
+        <td>Bit11, Skewing 湲곗�멸린 洹��� ���깊��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Reset_encoder_difference</td>
+        <td>bit:1</td>
+        <td>Bit12, ��肄��� 媛� �ㅼ감 由ъ��</td>
+        <td>Bit12, ��肄��� 媛� �ㅼ감 由ъ��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Deactivate_external_encoders</td>
+        <td>bit:1</td>
+        <td>Bit13, �몃� ��肄��� 鍮����깊��</td>
+        <td>Bit13, �몃� ��肄��� 鍮����깊��</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Reserved_14</td>
+        <td>bit:1</td>
+        <td>Bit14,</td>
+        <td>Bit14,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Sync_Travel_Control.B.Reserved_15</td>
+        <td>bit:1</td>
+        <td>Bit15,</td>
+        <td>Bit15,</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Fault_Warning</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Fault_MainCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Test_Fault_SubCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.Clear_OperationInfo</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Test_Simulator.HMI_Set_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FOUT_Impossible_Reason_L</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FOUT_Impossible_Reason_R</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Clear_Warning_Timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Man_Travel_Low_Distance</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Man_Hoist_Low_Distance</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.InterlockMode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>main.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Travel_Limit_Flag</td>
+        <td>INT08U</td>
+        <td>1: 전진 리미트 감지, 2: 후진 리미트 감지</td>
+        <td>1: 전진 리미트 감지, 2: 후진 리미트 감지</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Hoist_Limit_Flag</td>
+        <td>INT08U</td>
+        <td>1: 하강 리미트 감지, 2: 상승 리미트 감지</td>
+        <td>1: 하강 리미트 감지, 2: 상승 리미트 감지</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.FPGA_Reset_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, fpga.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Hoist_Max_Touqe</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RxStatus_Cnt</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 읽기: com_tml.c — 조건 분기/판단에 사용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RxStatus_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.RxStatus_Timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.GCP_Connect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Year</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, rtc.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Mon</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, rtc.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Day</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, rtc.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Hour</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, rtc.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Set_HMI_SysTime_Min</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.SysTime</td>
+        <td>struct tm</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.Fork_IO_Manual_Control</td>
+        <td>INT08U[2]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.HMI_Com_Port</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TCPConnect</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c</td>
+      </tr><tr>
+        <td class="path">m_pgmEnv.TCPConnectTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_udp.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_udp.c</td>
+      </tr></tbody></table><h2 id="m_WorkData">m_WorkData — 현재 사이클 작업 데이터 (내부 큐)</h2><div class="note">0x41 작업수신 후 dev_SRM.c에서 채움. static 배열[30]. 지상반 m_St와 별개.</div><table><thead><tr>
+      <th style="width:28%">멤버 경로</th>
+      <th style="width:10%">타입</th>
+      <th style="width:22%">헤더 주석</th>
+      <th style="width:25%">실제 용도</th>
+      <th style="width:15%">사용 파일</th>
+    </tr></thead><tbody><tr>
+        <td class="path">m_WorkData.ForkAct</td>
+        <td>INT08U</td>
+        <td>0:없음, 1:#1적재, 2:#2개적재, 3:#1/#2적재, 4:#1이재, 5:#2이재, 6:#1/#2이재</td>
+        <td>작업 종류: MOVE_ONLY/GET/PUT/STICKY 분기 기준.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.IsStation</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Station_No</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Step</td>
+        <td>INT08U</td>
+        <td>2:From,  4:To</td>
+        <td>2:From,  4:To</td>
+        <td>alarm.c, can.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.ForkDepth</td>
+        <td>INT16S[2]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.GoodsType</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.TargetPos</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.TargetPos.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.TargetPos.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.TargetPos.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.TargetPos.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, com_dsp.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData</td>
+        <td>SRM_DriveSTR[INVERTOR_INSTALL_COUNT]</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].TargetPos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].StartPos</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].Move_Dir</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].Move_Spd</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].MoveDistance</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].MoveTime_Real</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].MoveTime_Profile</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].Move_Diff_Real_Profile</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].Move_Complete</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].MoveTimer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.DrvData[i].MaxSpeed</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Sync_TravLift_DiffTime</td>
+        <td>INT32S</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Sync_TravLift_Flag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Sync_TravLift_Timer</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.PLC_Interlock_NoUseFlag</td>
+        <td>INT08U</td>
+        <td>1: PLC 인터락 확인 안함.</td>
+        <td>1이면 PLC 인터락 확인 생략.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Not_Check_Goods</td>
+        <td>INT08U</td>
+        <td>1: 공출고, 공입고 확인 안함.</td>
+        <td>1이면 공출고/공입고 검사 생략.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_WorkData.Rack_fork_obstruction</td>
+        <td>INT08U</td>
+        <td>1: 포크 간섭 여부 확인</td>
+        <td>WCS 지정 '주행/승강 스킵 금지' 플래그. 센서 충돌 아님.</td>
+        <td>dev_SRM.c</td>
+      </tr></tbody></table><h2 id="m_BKSram">m_BKSram — 정전 복구용 BKPSRAM 미러</h2><div class="note">전원 꺼져도 유지. 작업번호/알람로그/운행정보 복원.</div><table><thead><tr>
+      <th style="width:28%">멤버 경로</th>
+      <th style="width:10%">타입</th>
+      <th style="width:22%">헤더 주석</th>
+      <th style="width:25%">실제 용도</th>
+      <th style="width:15%">사용 파일</th>
+    </tr></thead><tbody><tr>
+        <td class="path">m_BKSram.AlarmLog</td>
+        <td>AlarmLogSTR</td>
+        <td>2454 bytes</td>
+        <td>2454 bytes</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Reseved1</td>
+        <td>INT08U[1485]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Reseved1</td>
+        <td>INT08U[785]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.InitOperInfoCode</td>
+        <td>INT08U[4]</td>
+        <td>"Oper"</td>
+        <td>"Oper"</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo</td>
+        <td>OperationInfoSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Operation_Time</td>
+        <td>SumOperateTimeSTR[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Operation_Time[i].Sum_Second</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Operation_Time[i].Sum_Minute</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Moving_Distance</td>
+        <td>SumDistanceSTR[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Moving_Distance[i].Sum_mm</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.Moving_Distance[i].Sum_Meter</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.BrakeOpen_Count</td>
+        <td>INT32U[4]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.OperationInfo.reserved</td>
+        <td>INT08U[20]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo</td>
+        <td>SaveWorkSTR</td>
+        <td>108</td>
+        <td>108</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.CheckString</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt</td>
+        <td>WorkInfoSTR[2]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].WorkNum_Fork</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>작업 번호(WCS 부여).</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].Task_Index</td>
+        <td>INT08U</td>
+        <td>0 : It's not task work</td>
+        <td>0 : It's not task work</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].From_Cell_Fork</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].From_Cell_Fork.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].From_Cell_Fork.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].From_Cell_Fork.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].From_Cell_Fork.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Fork</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Fork.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Fork.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Fork.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Fork.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].OrderCode_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].OrderStatus_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 상태(대기/진행/완료). Save_Fork*가 m_St에 기록.</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].OrderProcess_Fork</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 진행 단계(세부 스텝). 지상반 폴링용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].WorkNum_Move</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>작업 번호(WCS 부여).</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Move</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Move.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Move.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Move.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].To_Cell_Move.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].OrderStatus_Move</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 상태(대기/진행/완료). Save_Fork*가 m_St에 기록.</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkSt[i].OrderProcess_Move</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>작업 진행 단계(세부 스텝). 지상반 폴링용.</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd</td>
+        <td>WorkCmdSTR</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.OrderCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c, main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.OperationFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>0x41 작업 옵션 비트필드. 현장별 해석 다름.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Reserved</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork</td>
+        <td>ForkWorkCmdSTR[2]</td>
+        <td>-</td>
+        <td>주로 쓰기: alarm.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork[i].WorkNum</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>작업 번호(WCS 부여).</td>
+        <td>alarm.c, main.c, dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork[i].FromCell</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork[i].ToCell</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork[i].Good_Type</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.WorkInfo.WorkCmd.Fork[i].Reserved</td>
+        <td>INT08U[5]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Graph_Type</td>
+        <td>INT08U</td>
+        <td>그래프 기록 타입</td>
+        <td>그래프 기록 타입</td>
+        <td>alarm.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Graph_Interval</td>
+        <td>INT08U</td>
+        <td>Graph saving interval</td>
+        <td>Graph saving interval</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Graph_Start_mm</td>
+        <td>INT32U</td>
+        <td>Graph saving position mm</td>
+        <td>Graph saving position mm</td>
+        <td>alarm.c, com_tml.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Reseved2</td>
+        <td>INT08U[36]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.BootPgmVer</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>주로 읽기: main.c — 조건 분기/판단에 사용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Reset_Reason</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: main.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>main.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.InitDeviceCode</td>
+        <td>INT08U[4]</td>
+        <td>"Devi"</td>
+        <td>"Devi"</td>
+        <td>SRM_Parameter.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice</td>
+        <td>DeviceSetting</td>
+        <td>Size: 93 bytes</td>
+        <td>Size: 93 bytes</td>
+        <td>SRM_Parameter.c</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_0</td>
+        <td>NetworkInfo_t</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_0.MyIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_0.SubnetMask</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_0.GatewayIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.MyMACAddr_0</td>
+        <td>INT08U[6]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_1</td>
+        <td>NetworkInfo_t</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_1.MyIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_1.SubnetMask</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_1.GatewayIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.MyMACAddr_1</td>
+        <td>INT08U[6]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_2</td>
+        <td>NetworkInfo_t</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_2.MyIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_2.SubnetMask</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.NetworkInfo_2.GatewayIP</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.MyMACAddr_2</td>
+        <td>INT08U[6]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.ProjectID</td>
+        <td>ProjectID_t</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.ProjectID.ProjectNo</td>
+        <td>INT08U[6]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.ProjectID.Group_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.ProjectID.Device_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.mDevice.Reserved</td>
+        <td>INT08U[30]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">m_BKSram.Reserved_Fix</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr></tbody></table><h2 id="WorkCmdSTR">WorkCmdSTR — TML 0x41 수신 작업명령</h2><div class="note">com_tml.c rxCmdOrder 파싱 결과. m_WorkData로 변환되기 전 원본 구조.</div><table><thead><tr>
+      <th style="width:28%">멤버 경로</th>
+      <th style="width:10%">타입</th>
+      <th style="width:22%">헤더 주석</th>
+      <th style="width:25%">실제 용도</th>
+      <th style="width:15%">사용 파일</th>
+    </tr></thead><tbody><tr>
+        <td class="path">WorkCmd.OrderCode</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.OperationFlag</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>0x41 작업 옵션 비트필드. 현장별 해석 다름.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Reserved</td>
+        <td>INT08U[4]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork</td>
+        <td>ForkWorkCmdSTR[2]</td>
+        <td>-</td>
+        <td>주로 쓰기: com_tml.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>com_tml.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].WorkNum</td>
+        <td>INT32U</td>
+        <td>-</td>
+        <td>작업 번호(WCS 부여).</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].FromCell</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].FromCell.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].FromCell.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].FromCell.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].FromCell.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].ToCell</td>
+        <td>CellPosSTR</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].ToCell.Station</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 쓰기: dev_SRM.c — 값을 세팅하는 내부 상태/보고용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].ToCell.Row_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].ToCell.Bay_ID</td>
+        <td>INT16U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].ToCell.Level_ID</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].Good_Type</td>
+        <td>INT08U</td>
+        <td>-</td>
+        <td>주로 읽기: dev_SRM.c — 조건 분기/판단에 사용.</td>
+        <td>dev_SRM.c</td>
+      </tr><tr>
+        <td class="path">WorkCmd.Fork[i].Reserved</td>
+        <td>INT08U[5]</td>
+        <td>-</td>
+        <td>코드 참조 적음. 예약/미사용 가능성.</td>
+        <td>-</td>
+      </tr></tbody></table></body></html>

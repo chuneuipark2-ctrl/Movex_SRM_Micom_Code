@@ -1,0 +1,8 @@
+{
+  "name": "srm-manual",
+  "private": true,
+  "description": "SRM struct member manual generator",
+  "dependencies": {
+    "docx": "^9.5.0"
+  }
+}
