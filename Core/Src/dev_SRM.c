@@ -4281,14 +4281,14 @@ void Motor_Brake_Enable(INT08U nInvertor)
 
 void Motor_Brake_Release(INT08U nInvertor)
 {
-	UnitVelocitySTR nStopVelocity;
-	ControlWord_A_t nControlWord;
+	UnitVelocitySTR nStopVelocity; // 인버터에서 받아오는 속도값
+	ControlWord_A_t nControlWord;  // 인버터에서 받아오는 제어워드값
 
-	INT16U nOpMode = 0;
-	MOVKIT_POS_Control_t nControlWord_1;
-	MOVKIT_MAC_Control_t nControlWord_2;
+	INT16U nOpMode = 0; //기상반 모드
+	MOVKIT_POS_Control_t nControlWord_1; //위치제어모드
+	MOVKIT_MAC_Control_t nControlWord_2; //뭔지모르겟지만 인버터 내용
 
-	memset((INT08U*)&nStopVelocity, 0, sizeof(UnitVelocitySTR));
+	memset((INT08U*)&nStopVelocity, 0, sizeof(UnitVelocitySTR)); //메모리초기화
 
 	nStopVelocity.Acc = 600;
 	nStopVelocity.Dec = 600;
@@ -58972,46 +58972,47 @@ void SRM_Machine_Run_Process()
 
 		if (Check_Trav_lift_In_Postion(s_WorkInx))//주행 승강 인포지션값 체크가 켜지면
 		{
-			if (m_WorkData[s_WorkInx].Rack_fork_obstruction != 0)
+			if (m_WorkData[s_WorkInx].Rack_fork_obstruction != 0)//랙-포크 간섭 때문에, 이미 목적 level/bay에 있어도 주행 승강을 또해야 하는 이동 플래그로써 1이면 inposition이어도 더이동함, 0이면 더이동하지 않음
 			{
 				s_No_movement = 0;
 
-				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].StartPos = m_St.Inv_St[INV_TRAVEL].Current_Pos;
-				m_WorkData[s_WorkInx].DrvData[INV_HOIST].StartPos = m_St.Inv_St[INV_HOIST].Current_Pos;
-				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Dir = Check_Trav_Move_Dir(s_WorkInx);
-				m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir = Check_Lift_Move_Dir(s_WorkInx);
+				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].StartPos = m_St.Inv_St[INV_TRAVEL].Current_Pos; //주행 현재 위치를 시작위치로
+				m_WorkData[s_WorkInx].DrvData[INV_HOIST].StartPos = m_St.Inv_St[INV_HOIST].Current_Pos; // 승강 현재 위치를 시작위치로
+				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Dir = Check_Trav_Move_Dir(s_WorkInx); // 주행 회전방향 입력
+				m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir = Check_Lift_Move_Dir(s_WorkInx); // 승강 회전방향 입력
 
-				s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_PREFORE_MOVE);
+				s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_PREFORE_MOVE); // 이동 직전 대기시간(ms) -- 적재/이재/이동별 파라미터
 
-				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms; // run 시퀀스 타이머 시작(다음 state에서 경과 시간 측정)
 
-#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE
-				Motor_Brake_Release(INV_TRAVEL);
-				Motor_Brake_Release(INV_HOIST);
 
-				s_Brake_Release_Retry = 0;
+#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE //1이면 이동 전 브레이크 해제 확인(서브시퀀스용)
+				Motor_Brake_Release(INV_TRAVEL); //주행 브레이크 풀러봄, 브레이크 정상인지 체크용도인듯
+				Motor_Brake_Release(INV_HOIST); //승강 브레이크 풀러봄, 브레이크 정상인지 체크용도인듯
 
-				m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0;
-#else
-				m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;
+				s_Brake_Release_Retry = 0; //재시도 횟수 0 초기화
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0; //브레이크 풀렸는지 확인
+#else// 0이면, inpostion 인경우
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY; //이동전 대기시간줌
 #endif	
 			}
-			else
+			else // 렉포크 간섭 플래그가 1인경우 (인포지션이라도 더 이동해야 하는 경우)
 			{
 				// 브레이크 해제 후, 이동 후 딜레이 처리 스텝으로 이동
-				s_No_movement = 1;
+				s_No_movement = 1; //주행승강 이동없음
 				s_Check_InPos_Retry = 0;
 
 				//Motor_Brake_Release(INV_TRAV);	// 작업위치일 경우 주행 브레이크는 해제할 필요 없음.
 
-#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE
-				if ((m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_GET)
-					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_PUT))
-					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_STICKY))
+#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE//주행 좌측이동 플래그가 켜지면
+				if ((m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_GET) //포크1번 적재, enum 멤버이므로 각 인덱스가 들어간다.
+					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_PUT))//포크1번 이재
+					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_STICKY))//포크 1번 스티키 인경우
 					{
-						s_Brake_Release_Retry = 0;
+						s_Brake_Release_Retry = 0;//재시도 횟수를 초기화하고
 
-						Motor_Brake_Release(INV_HOIST);
+						Motor_Brake_Release(INV_HOIST);//승강 인버터 브레이크를 동작한다.
 				}
 #endif
 				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
