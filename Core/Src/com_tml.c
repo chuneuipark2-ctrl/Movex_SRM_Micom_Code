@@ -2337,17 +2337,17 @@ void rxTaskCmdOrder(INT08U port, TMLComPTR pCom)
 }
 
 
-void rxCmdOrder(INT08U port, TMLComPTR pCom)
+void rxCmdOrder(INT08U port, TMLComPTR pCom) //지상반에서 반송지령을 받았을떄 0x41(이동, 로딩, 언로딩) 실행되는 함수임 => 지상반 명령을 받아도되는지 검사하는 함수
 {
-	WorkCmdSTR* pCmd;
-	INT08U accept[2] = { 0 };
-	INT08U ret_value[2] = { 0 };
+	WorkCmdSTR* pCmd; //함수에서 인자로 넘겨받을 애는 포인터이며, WorkCmdSTR*로 부른다.
+	INT08U accept[2] = { 0 }; // 0: ACK, 1: NACK
+	INT08U ret_value[2] = { 0 }; // 0 오류 없음, 0이아니면 오류있음
 	//INT08U run_st = 0;
 	//INT08U plc_flag = 0;
 
-	static INT32U s_RecvCount = 0;
+	static INT32U s_RecvCount = 0; //받은 카운터수
 
-	if (m_St.CP_State.Bit.SafetyPlugOn)
+	if (m_St.CP_State.Bit.SafetyPlugOn)//지상반 보고 안전플러그 열렸냐 여부 확인
 	{
 		save_error_code(ERROR1_SAFETY_PULG_ON, 1, 2);
 		//return;
@@ -2361,8 +2361,9 @@ void rxCmdOrder(INT08U port, TMLComPTR pCom)
 	}
 	*/
 
-	pCmd = (WorkCmdSTR*)&pCom->Data[0];
+	pCmd = (WorkCmdSTR*)&pCom->Data[0]; //0번 데이터가 가르치는 위치에 들어가서 pcmd에 넣어
 
+	//예외 조건: SRM이 에러가 낫거나, 메뉴얼모드이거나, 스탠바이 모드가 아니거나 포크가 센터가 아니거나, 자동비트가 꺼져있거나,
 	if (m_St.SRM_Status1.Bit.Fault)
 	{
 		ret_value[0] = COMMAND_ERROR_FALUT_STATE;  // 이상 발생
@@ -2386,22 +2387,22 @@ void rxCmdOrder(INT08U port, TMLComPTR pCom)
 	}
 	else
 	{
-		if (pCmd->OrderCode == ORDER_CODE_MOVE)
+		if (pCmd->OrderCode == ORDER_CODE_MOVE) //단순 이동이면 명령 받아도됨
 		{
 			asm volatile("NOP");
 		}
-		else
+		else //적재나 이재 같은 경우에
 		{
-			if ((pCmd->OrderCode == ORDER_CODE_STORE)
-				|| (pCmd->OrderCode == ORDER_CODE_UNSTORE)
-				|| (pCmd->OrderCode == ORDER_CODE_RACK_TO_RACK)
-				|| (pCmd->OrderCode == ORDER_CODE_STATION_TO_STATION)
-				|| (pCmd->OrderCode == ORDER_CODE_STICKY))
+			if ((pCmd->OrderCode == ORDER_CODE_STORE) //적재
+				|| (pCmd->OrderCode == ORDER_CODE_UNSTORE) // 이재
+				|| (pCmd->OrderCode == ORDER_CODE_RACK_TO_RACK) //랙투랙
+				|| (pCmd->OrderCode == ORDER_CODE_STATION_TO_STATION)//스테이션 투스테이션
+				|| (pCmd->OrderCode == ORDER_CODE_STICKY))//스티키 모드이면
 			{
 				if (m_St.SRM_Status1.Bit.StartOn == 0)  // 시작On이 아니면
 				{
 					//Event_Warning_Code(WARNING_CODE_20, 2, 0);
-					ret_value[0] = COMMAND_ERROR_NON_ONLINE;
+					ret_value[0] = COMMAND_ERROR_NON_ONLINE; //논온라인 에러뜸
 				}
 
 #if DISABLE_ERROR_CARRIER_GOODS_SENSOR
@@ -6274,7 +6275,7 @@ void rxDataAnalysis(INT08U port, TMLComPTR pCom)
 
 		case TY_CMD_TASK_ORDER: rxTaskCmdOrder(port, (TMLComPTR)pCom);      break;
 
-		case TY_CMD_ORDER: rxCmdOrder(port, (TMLComPTR)pCom);      break;
+		case TY_CMD_ORDER: rxCmdOrder(port, (TMLComPTR)pCom);      break; //지상반으로 부터 반송지령(0X41)을 받았을때 rxCMDOrder 함수에 (포트넘버, 포인터주소 넘겨줌);
 
 		case TY_CMD_REFERENCE: rxCmdReferenceSearch(port, (TMLComPTR)pCom);      break;
 

@@ -41,6 +41,9 @@ const ECAT_MAIN = path.join(lg.SRC, "ecat_main.c");
 const PARAM = path.join(lg.SRC, "SRM_Parameter.c");
 const DEV_HDR = path.join(lg.INC, "dev_SRM.h");
 const USER_DEF = path.join(lg.INC, "User_Define.h");
+const { getDeepNarrative } = require("./deep_narratives.js");
+const { autoAnalyzeFunction } = require("./auto_narrative.js");
+
 const UNIFIED_PREFIX = "SRM_MX_통합코드백과";
 
 function getRevisionInfo() {
@@ -65,10 +68,48 @@ function extractHtmlBody(htmlPath) {
     .replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
-function fnBlock(source, name, label) {
+function fnBlock(source, name, label, fileHint) {
   const body = extractFunctionBody(source, name, 0);
-  return `<details class="fn-item" id="fn_${name}"><summary class="mono">${esc(name)}()</summary>
-<p>${esc(label || "")}</p><pre class="code-sm">${esc(body)}</pre></details>`;
+  const auto = autoAnalyzeFunction(body, name, fileHint || "");
+  const deep = getDeepNarrative(name);
+  let html = `<details class="fn-item drill-L0" id="fn_${name}">`;
+  html += `<summary><span class="mono">${esc(name)}()</span> — ${esc(label || guessRoleFromName(name))}</summary>`;
+  html += `<div class="drill-oneline">${auto.oneLiner}</div>`;
+  html += `<details class="drill-L1"><summary>▶ L1 — 역할·호출 맥락</summary>${auto.contextHtml}</details>`;
+  html += `<details class="drill-L2"><summary>▶ L2 — 조건·에러·Store/Save·RunMode (자동 분석)</summary>${auto.analysisHtml}</details>`;
+  if (deep) {
+    html += `<details class="drill-L3" id="deep_${name}"><summary>▶ L3 — 현장 해설·함정 (상세)</summary>${deep}</details>`;
+  } else if (body.split("\n").length > 15) {
+    html += `<details class="drill-L3"><summary>▶ L3 — 분기·조건 상세 (자동)</summary>${buildIfCommentary(body)}</details>`;
+  }
+  html += `<details class="drill-L4"><summary>▶ L4 — 전체 소스 (${body.split("\n").length}줄)</summary>`;
+  html += `<pre class="code-sm">${esc(body)}</pre></details>`;
+  html += `</details>`;
+  return html;
+}
+
+function guessRoleFromName(name) {
+  if (name.startsWith("rx")) return "TML 수신";
+  if (name.startsWith("Store_")) return "Store 입력층";
+  if (name.startsWith("Save_")) return "Save 출력층";
+  if (name.startsWith("Auto_Ctr_")) return "자동 축제어";
+  return "";
+}
+
+/** if/else if 주요 분기 추출 → L3 자동 */
+function buildIfCommentary(body) {
+  const rows = [];
+  for (const line of body.split("\n")) {
+    const t = line.trim();
+    if (/^if\s*\(|^else if\s*\(/.test(t) && t.length < 200) {
+      rows.push(t);
+    }
+    if (rows.length >= 40) break;
+  }
+  if (!rows.length) return `<p>단순 함수 — L2 자동 분석 참고.</p>`;
+  let html = `<p>주요 분기 (${rows.length}건, 클릭 후 L4에서 본문 대조):</p><ul>`;
+  for (const r of rows) html += `<li><code>${esc(r)}</code></li>`;
+  return html + `</ul>`;
 }
 
 function extractRxFunctionNames(text) {
@@ -183,7 +224,8 @@ function buildBookNav() {
 <a href="#traps">B. 함정</a>
 <a href="#symbol-dict">C. 심볼 사전</a>
 <a href="#struct-tree-embed">D. 구조체 트리</a>
-<a href="#source-full">E. Core/Src 전체 소스</a>`;
+<a href="#source-full">E. Core/Src 전체 소스</a>
+<a href="#drill-guide">F. 드릴다운 읽는법</a>`;
 }
 
 function buildVol0(revInfo, meta) {
@@ -201,7 +243,8 @@ ${buildRevBanner(revInfo)}
 <li><b>제8~9권</b>: Setup·Flash 파라미터</li>
 <li><b>부록</b>: 심볼 ${meta.symbolItems || "7700+"}항목 내장</li>
 </ul>
-<p>소스는 <b>생략 없이</b> 함수 단위로 펼칩니다. RunMode ${meta.runCases}개 · TML ${meta.tmlHandlers}개 · Store ${meta.stores} · Save ${meta.saves}</p>
+<p>소스는 <b>생략 없이</b> 함수 단위 L4. RunMode ${meta.runCases}개 · TML ${meta.tmlHandlers}개 · Store ${meta.stores} · Save ${meta.saves}</p>
+<p><b>REV4 드릴다운</b>: ▶ <b>L1</b> 맥락 → <b>L2</b> 자동분석 → <b>L3</b> 현장해설 → <b>L4</b> 전체소스 (<a href="#drill-guide">읽는법</a>)</p>
 </div>
 
 <h2 id="big-picture">0.2 SRM 전체 그림 (지상반 → MCU → 인버터)</h2>
@@ -306,12 +349,23 @@ ${table}
 }
 
 function buildVol4TmlCore(tmlText) {
+  const rx41Deep = getDeepNarrative("rxCmdOrder") || "";
   return `
 <h2 id="tml-core">4.2 핵심 명령 — 0x30 / 0x41 / 0x50</h2>
 ${buildRxCmdOrderDeep()}
+<details class="drill-L0" id="rx41-hub">
+<summary><b>▶ 0x41 rxCmdOrder — 드릴다운 해설 (L1→L4)</b></summary>
+${rx41Deep}
+${fnBlock(tmlText, "rxCmdOrder", "0x41 반송지령", "com_tml.c")}
+</details>
 ${buildStartOnDeep()}
-<h3>4.2.1 rxStatusReq (0x30) — 전체</h3>
-${fnBlock(tmlText, "rxStatusReq", "m_St 전체 또는 일부를 지상반에 응답")}
+<details class="drill-L0" id="rx50-hub">
+<summary><b>▶ 0x50 Start — 드릴다운</b></summary>
+${getDeepNarrative("rxCmdStart") || ""}
+${fnBlock(tmlText, "rxCmdStart", "0x50 Start", "com_tml.c")}
+</details>
+<h3>4.2.1 rxStatusReq (0x30)</h3>
+${fnBlock(tmlText, "rxStatusReq", "m_St 폴링 응답", "com_tml.c")}
 `;
 }
 
@@ -343,13 +397,13 @@ function buildVol5StoreSave(devText, alarmText, stores, saves) {
   let html = `<h2 id="store-all">제5권 · 5.1 Store_* — 입력·큐 (dev_SRM.c, ${stores.length}개)</h2>
 <p>0x41 수신·RunMode 진입 시 <code>m_WorkData</code>·PDO 큐에 레시피 적재.</p>`;
   for (const s of stores) {
-    html += fnBlock(devText, s.name, `L${s.line}`);
+    html += fnBlock(devText, s.name, `Store L${s.line}`, "dev_SRM.c");
   }
 
   html += `<h2 id="save-all">5.2 Save_* — 출력·보고 (alarm.c, ${saves.length}개)</h2>
 <p>RunMode 진행 중 <code>m_St</code>·BKPSRAM 갱신 → 0x30 폴링으로 지상반 전달.</p>`;
   for (const fn of saves) {
-    html += fnBlock(alarmText, fn, "→ m_St / m_BKSram");
+    html += fnBlock(alarmText, fn, "→ m_St / m_BKSram", "alarm.c");
   }
   return html;
 }
@@ -431,6 +485,12 @@ ${fnBlock(devText, "MANUAL_CTR_Fork", "")}
 
 function buildVol7Auto(runCases, devText, runSeq, forkSteps, workStatus) {
   return `
+<h2 id="fork-work-cmd-hub">7.0 SRM_Fork_Work_Cmd — 드릴다운</h2>
+<details class="drill-L0" id="SRM_Fork_Work_Cmd-hub">
+<summary><b>▶ SRM_Fork_Work_Cmd (0x41 수락 후 본체)</b></summary>
+${getDeepNarrative("SRM_Fork_Work_Cmd") || ""}
+${fnBlock(devText, "SRM_Fork_Work_Cmd", "작업 레시피·목적지변경", "dev_SRM.c")}
+</details>
 <h2 id="get-flow-table">제7권 · 7.1 GET(적재) 단계</h2>
 ${buildLoadingFlowTable()}
 <h2 id="put-flow">7.2 PUT(이재) 단계</h2>
@@ -439,8 +499,8 @@ ${buildPutFlowTable()}
 ${buildPrepareMoveDeep()}
 <h2 id="fork-steps">7.4 지상반 스텝 (OrderProcess)</h2>
 ${buildForkStepTable(forkSteps, workStatus)}
-<h2 id="runmode-all">7.5 RunMode case 전체 (${runCases.length}개 — 소스 생략 없음)</h2>
-${buildAllRunCaseIndex(runCases, devText, runSeq)}
+<h2 id="runmode-all">7.5 RunMode case 전체 (${runCases.length}개 — 드릴다운 L1→L2)</h2>
+${buildAllRunCaseIndex(runCases, devText, runSeq, { withDrill: true })}
 `;
 }
 
@@ -532,7 +592,16 @@ ${traps.map((t) => `<div class="trap-card"><div class="mono">${esc(t.name)}</div
 <div class="symbol-embed">${symbolBody}</div>
 <h2 id="struct-tree-embed">부록 D — 구조체 트리 (내장)</h2>
 <div class="struct-embed">${structBody}</div>
-${buildAppendixFullSources()}`;
+${buildAppendixFullSources()}
+<h2 id="drill-guide">부록 F — 드릴다운 읽는 법 (REV4)</h2>
+<div class="goal">
+<p><b>L0</b> — 개요·목차 (REV3 내용 유지)</p>
+<p><b>L1</b> — 역할·호출 맥락 (main/TML/RunMode/Store/Save 층)</p>
+<p><b>L2</b> — 자동 분석: COMMAND_ERROR, save_error_code, RunMode, Store_*, Save_*, PDO, Flash</p>
+<p><b>L3</b> — 현장 해설·함정 (핵심 함수 수동 작성)</p>
+<p><b>L4</b> — 전체 소스</p>
+<p>링크: <code>#fn_함수명</code> · <code>#case_RUN_SEQ_*</code> · <code>#rx41-hub</code> · <code>#SRM_Fork_Work_Cmd-hub</code></p>
+</div>`;
 }
 
 function buildBook(ctx, revInfo) {
@@ -667,6 +736,11 @@ function main() {
     .rev-latest{color:#a5f3b4;font-weight:600;margin-left:10px}
     .symbol-embed,.struct-embed{font-size:9pt}
     pre.source-full{font-size:6.5pt;line-height:1.35}
+    details.drill-L0{border:2px solid #1a6b3c;margin:12px 0;border-radius:8px;padding:4px 12px 12px;background:#f8fcf9}
+    details.drill-L1,details.drill-L2,details.drill-L3,details.drill-L4{margin:8px 0 8px 12px;border:1px solid #b8d4c4;border-radius:6px;padding:4px 10px 10px;background:#fff}
+    details.drill-L0>summary,details.drill-L1>summary{font-weight:600;cursor:pointer;padding:6px 2px}
+    details.drill-L3{background:#f0f8f4;border-color:#1a6b3c}
+    .drill-oneline{font-size:9pt;margin:6px 0 10px;padding:6px 10px;background:#eef6f0;border-radius:4px}
     .pattern-card,.trap-card{margin:8px 0;padding:8px 12px;border-radius:6px;background:#fafcfa;border:1px solid #c8e0d0}
     @media print{nav.sidebar{display:none}main{max-width:100%}}
   `;
@@ -689,7 +763,11 @@ function main() {
 ## ★ 사용 파일
 | 파일 | 설명 |
 |------|------|
-| **${outName}** | **REV${revInfo.rev} — 책형 통합본 (${mb} MB)** |
+| **${outName}** | **REV${revInfo.rev} — 드릴다운 L1→L4 해설 + 전체 소스 (${mb} MB)** |
+
+## 드릴다운 (REV4+)
+- **L0** 개요 (REV3 유지) → **L1** 맥락 → **L2** 자동분석 → **L3** 현장해설 → **L4** 전체소스
+- 허브: `#rx41-hub`, `#SRM_Fork_Work_Cmd-hub`, `#fn_함수명`, `#case_RUN_SEQ_*`
 
 ## 구조 (큰 개념 → 작은 개념)
 - 제0권: 서문·전체 그림

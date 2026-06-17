@@ -820,7 +820,7 @@ int main(void)
 	{
 		AlarmManager(); //DI/DO, 에러, SAVE_* 트리거
 
-		FpgaManager(); //FPGA 통신
+		FpgaManager(); //FPGA, Ethercat 통신
 
 		McuComManager(); //MCU 보조 통신
 
@@ -853,8 +853,12 @@ int main(void)
     MX_USB_HOST_Process();
 
     /*
-     *
-     *
+     *0x41 WorkCmdSTR -> rx CmdOrder() -> Store_Work_Data*() -> m_WorkData[s_WorkInx]  입력층
+     *SRM_Machine_Run_Process() Switch문 -> m_pgmEnv.SRM_RunMode (enumSRM_RUN_SEQ)      실행층
+     *                                  -> m_pgmEnv.SRM_RunTimer                       실행층
+     *                                  -> Sub_Run_Step (축별 서브시퀀스)                  실행층
+     *Save_RokWork_*() / Save_ForkMove_*() -> m_St (StatusSTR) -> 0x30 응답              출력층
+     *save_error_code() -> m_St 에러 + m_BKSram.AlarmLog                                 출력층
      * */
 
 

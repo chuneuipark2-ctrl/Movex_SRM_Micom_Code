@@ -45933,13 +45933,15 @@ INT08U SRM_Task_work_cmd(TaskCommand* pCmd, INT08U nIndex)
   * @param None
   * @retval None
   */
-INT08U SRM_Fork_Work_Cmd(WorkCmdSTR* pCmd)
+INT08U SRM_Fork_Work_Cmd(WorkCmdSTR* pCmd) // SRM 포크작업 명령
 {
-	INT32S from_tpos[2] = { 0 }, to_tpos[2] = { 0 };
-	INT32S from_lpos[2] = { 0 }, to_lpos[2] = { 0 };
-	INT16S from_depth[2] = { 0 }, to_depth[2] = { 0 };
+	//2차원 배열인 이유는 srm 랙의 구조가 x축 y축으로 이루어져있기 때문임
+
+	INT32S from_tpos[2] = { 0 }, to_tpos[2] = { 0 }; //주행포지션의 from과 주행포지션의 to를 0으로 초기화
+	INT32S from_lpos[2] = { 0 }, to_lpos[2] = { 0 };//승강포지션의 from과 승강포지션의 to를 0으로 초기화
+	INT16S from_depth[2] = { 0 }, to_depth[2] = { 0 };//포크길이 from과, 포크길이 to를 0으로 초기화
 	//INT16S from_offset[2] = { 0 }, to_offset[2] = { 0 };
-	INT08U from_is_sta[2] = { 0 }, to_is_sta[2] = { 0 };
+	INT08U from_is_sta[2] = { 0 }, to_is_sta[2] = { 0 };//스테이션 투 스테이션 일때
 	INT08U error[2] = { 0, };
 	INT08U error1[2] = { 0, };
 	INT08U i = 0;
@@ -45960,60 +45962,65 @@ INT08U SRM_Fork_Work_Cmd(WorkCmdSTR* pCmd)
 
 	INT08U nBackup_Work = 0;
 
-	memset((INT08U*)&fp[0], 0x00, sizeof(CellPosSTR) * 2);
-	memset((INT08U*)&tp[0], 0x00, sizeof(CellPosSTR) * 2);
+	memset((INT08U*)&fp[0], 0x00, sizeof(CellPosSTR) * 2);//FromPosition의 위치를 0으로 초기화
+	memset((INT08U*)&tp[0], 0x00, sizeof(CellPosSTR) * 2);//ToPosition의 위치를 0으로 초기화
 
 	if (m_St.SRM_Mode.Bit.Auto)
 	{
-		if (pCmd->OrderCode == ORDER_CODE_MOVE)
+		if (pCmd->OrderCode == ORDER_CODE_MOVE) //이동이면 그냥 건너뜀
 		{
 			//return;
 		}
 		else if ((pCmd->OrderCode == ORDER_CODE_RACK_CHG_DST)
 			|| (pCmd->OrderCode == ORDER_CODE_STATION_CHG_DST))
+			//렉 목적지 변경이거나, 스테이션 변경인 경우
 		{
-			if (m_St.SRM_Status1.Bit.StartOn == 0)
+			if (m_St.SRM_Status1.Bit.StartOn == 0) //start on 버튼이 꺼져있는 경우에 한해
 			{
 				if ((pCmd->Fork[POS_FORK_1].WorkNum)
-					&& (m_St.ForkWork[POS_FORK_1].WorkNum_Fork == 0))
+					&& (m_St.ForkWork[POS_FORK_1].WorkNum_Fork == 0)) // 지상반 0x41 패킷에 실려온 작업번호 && SRM이 지금 들고 있는 포크 1 작업번호(m_St / 0x30)
+					//의미: 지상반에서 작업번호를 줬는데, SRM쪽에서 아직 받지 않은경우
+				{
+					nCheck_RackChange_Enable = 1; // 변경가능 조건 flag 1
+				}
+
+				if ((m_St.ForkWork[POS_FORK_1].WorkNum_Fork == pCmd->Fork[POS_FORK_1].WorkNum)) // 지금 저장되있는 넘버와 지상반에서 저장된 넘버가 같으면 목적지 변경허용
 				{
 					nCheck_RackChange_Enable = 1;
 				}
 
-				if ((m_St.ForkWork[POS_FORK_1].WorkNum_Fork == pCmd->Fork[POS_FORK_1].WorkNum))
-				{
-					nCheck_RackChange_Enable = 1;
-				}
+				// 데이터가 꼬이지 않게 막아주는 시퀀스 같다.
 
-				if (nCheck_RackChange_Enable)
+				if (nCheck_RackChange_Enable) //렉변경 허용
 				{
-					if (pCmd->OrderCode == ORDER_CODE_RACK_CHG_DST)
+					if (pCmd->OrderCode == ORDER_CODE_RACK_CHG_DST)//지상반 명령이 렉목적지변경이 켜져있을때
 					{
-						if ((pCmd->Fork[POS_FORK_1].ToCell.Bay_ID == 0) \
-							|| (pCmd->Fork[POS_FORK_1].ToCell.Level_ID == 0) \
-							|| (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 0))
+						if ((pCmd->Fork[POS_FORK_1].ToCell.Bay_ID == 0) \//셀베이 아이디
+							|| (pCmd->Fork[POS_FORK_1].ToCell.Level_ID == 0) \//셀레벨 아이디
+							|| (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 0))//셀로우 아이디가 하나라도 0이면
 						{
-							return COMMAND_ERROR_RACK_POSITION_BLANK;
+							return COMMAND_ERROR_RACK_POSITION_BLANK;// 공백 애러 내고
 						}
-						else
+						else// 정상적인 경우에
 						{
-							if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+							if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)// MCU에 저장된 포크 타입이 싱글딥이면
 							{
-								if (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 1)
+								if (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 1)//렉번호가 1열일때
 								{
-									if (m_ExtSEnv2.ForkDrive.ForkPosDepth.mFEL < 0)
+									if (m_ExtSEnv2.ForkDrive.ForkPosDepth.mFEL < 0)//포크 댑스(FEL 까지의)가 0보다작으면 (왼쪾이 음수)
 									{
-										nEnable_Change_Dst = 1;
+										nEnable_Change_Dst = 1; //목적지 변경가능
 									}
 								}
-								else if (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 2)
+								else if (pCmd->Fork[POS_FORK_1].ToCell.Row_ID == 2)//렉번호가 2열일떄
 								{
-									if (m_ExtSEnv2.ForkDrive.ForkPosDepth.mFER > 0)
+									if (m_ExtSEnv2.ForkDrive.ForkPosDepth.mFER > 0)//포크댑스(FER까지의)가 0보다 크면
 									{
-										nEnable_Change_Dst = 1;
+										nEnable_Change_Dst = 1; //목적지 변경가능
 									}
 								}
 							}
+							//더블딥 투포지션이거나 더블딥 3포지션일떄
 							else if ((m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_2POS) \
 								|| (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_3POS))
 							{
@@ -46048,18 +46055,18 @@ INT08U SRM_Fork_Work_Cmd(WorkCmdSTR* pCmd)
 							}
 						}
 					}
-					else
+					else //pCmd->OrderCode == ORDER_CODE)RACK_CHG_DST 가 아닌 모든 경우의 수니까 0x17 스테이션 목적지 변경일때임
 					{
 						// ORDER_CODE_STATION_CHG_DST
 						if ((pCmd->Fork[POS_FORK_1].ToCell.Station >= 1) \
-							&& (pCmd->Fork[POS_FORK_1].ToCell.Station <= m_ExtSEnv1.StationEnv.TotalUseCnt))
+							&& (pCmd->Fork[POS_FORK_1].ToCell.Station <= m_ExtSEnv1.StationEnv.TotalUseCnt)) //포크 목적 스테이션값이 1보다 크거나 같으면서, 총사용할 카운트 값보다 작은 경우에만 실행
 						{
-							nChange_DST_Station = pCmd->Fork[POS_FORK_1].ToCell.Station - 1;
+							nChange_DST_Station = pCmd->Fork[POS_FORK_1].ToCell.Station - 1; // 목적스테이션은 이동할 스테이션에서 1을 뺀갑이다. 배열이기 떄문 배열은 0번방부터 넣음
 
 							if ((m_ExtSEnv1.StationEnv.StationSet[nChange_DST_Station].Type == STATION_OUT_TYPE) \
-								|| (m_ExtSEnv1.StationEnv.StationSet[nChange_DST_Station].Type == STATION_IN_OUT_TYPE))
+								|| (m_ExtSEnv1.StationEnv.StationSet[nChange_DST_Station].Type == STATION_IN_OUT_TYPE)) // 스테이션이 출고만이거나 입출고 동시에 하는 경우에
 							{
-								nEnable_Change_Dst = 1;
+								nEnable_Change_Dst = 1; // 목적지 변경가능
 							}
 						}
 						else
@@ -58462,13 +58469,13 @@ void SRM_Machine_Run_Process()
 
 	//static INT08U s_TravLift_SyncFlag = 0;
 
-	static INT08U s_WorkInx = 0;
-	static INT08U s_Work_Fork_Flag = 0;
+	static INT08U s_WorkInx = 0; // 현재 m_WorkData 인덱스
+	static INT08U s_Work_Fork_Flag = 0; // 포크 1/2 동시 작업비트
 
 	static INT32U s_ChkTimer = 0;
 	static INT08U s_Retry_Count = 0;
 
-	static INT08U s_No_movement = 0;
+	static INT08U s_No_movement = 0; // 주행 승강 스킵, 포크만
 
 	//static INT32U s_ForkMoveSensorCheck[2] = { 0, };
 	static INT16S s_Fork_TargetPos[2] = { 0 };
@@ -58497,14 +58504,14 @@ void SRM_Machine_Run_Process()
 	static INT32U s_CheckHomeSensor = 0;
 
 	static INT32U s_Over_Time = 0;
-	static INT32U s_Delay_Time = 0;
+	static INT32U s_Delay_Time = 0; // Read_DelayTime() 결과 ms
 
 	static INT16U s_CompelteCount = 0;
 
 	static INT08U s_Fork_Oper_Mode = 0;
 
-	static INT08U s_Brake_Release_Retry = 0;
-	INT08U nDef_Error_Brake_Release_Retry = 5;
+	static INT08U s_Brake_Release_Retry = 0; // 브레이크 해제 제시도
+	INT08U nDef_Error_Brake_Release_Retry = 5; // 에러시 브레이크 개방횟수 5번
 
 	INT08U nStationNo = 0;
 
@@ -67956,11 +67963,11 @@ void SRM_Manager(void)
 
 	Scan_Digital_Input_Chattering();
 
-	SRM_Machine_Process(s_now_SSR);
+	SRM_Machine_Process(s_now_SSR); //SSR 연결
 
-	SRM_Demo_Run_Process();
+	SRM_Demo_Run_Process(); // 데모운전 본체
 
-	SRM_Machine_Run_Process();
+	SRM_Machine_Run_Process(); //상태머신 본체
 
 	HMI_ModbusTCP_Proc();
 

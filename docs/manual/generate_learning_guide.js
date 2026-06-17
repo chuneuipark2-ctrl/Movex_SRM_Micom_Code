@@ -516,11 +516,20 @@ function buildLoadingFlowTable() {
   return html;
 }
 
-function buildAllRunCaseIndex(runCases, devText, runSeqEnum) {
+function buildAllRunCaseIndex(runCases, devText, runSeqEnum, options = {}) {
+  let withDrill = options.withDrill !== false;
+  let autoNarr = null;
+  if (withDrill) {
+    try {
+      autoNarr = require("./auto_narrative.js");
+    } catch (e) {
+      withDrill = false;
+    }
+  }
   const caseMap = new Map(runCases.map((c) => [c.name, c]));
   const enumMap = new Map(runSeqEnum.map((r) => [r.name, r]));
   let html = `<h2 id="runmode-all">Part G — RunMode case 전체 (${runCases.length}개, 코드 추출)</h2>
-<div class="note">각 case 클릭 → dev_SRM.c 소스 일부, 다음 RunMode, Save/에러 호출, <b>누가 이 case로 들어오나</b></div>`;
+<div class="note">▶ 클릭 드릴다운: <b>L1</b> 요약 → <b>L2</b> 맥락·에러·Store/Save → <b>L3</b> 전체 case 소스</div>`;
 
   for (const g of RUN_GROUPS) {
     html += `<h3 id="grp-${g.id}">${esc(g.title)}</h3>`;
@@ -532,12 +541,19 @@ function buildAllRunCaseIndex(runCases, devText, runSeqEnum) {
         continue;
       }
       const incoming = findIncomingTransitions(devText, name);
-      html += `<details class="case-item" id="case_${name}">`;
+      html += `<details class="case-item drill-L0" id="case_${name}">`;
       html += `<summary><span class="mono">${esc(name)}</span>`;
       if (en?.comment) html += ` <span class="kind">— ${esc(en.comment)}</span>`;
       html += ` <span class="kind">dev_SRM.c:${c.line}</span></summary>`;
 
-      if (incoming.length) {
+      if (withDrill && autoNarr) {
+        html += `<details class="drill-L1"><summary>▶ L1 — 맥락·데이터 흐름 (자동 해설)</summary>`;
+        html += autoNarr.autoAnalyzeRunCase(c, incoming);
+        html += `</details>`;
+      }
+
+      html += `<details class="drill-L2"><summary>▶ L2 — 전이·Save·에러·소스</summary>`;
+      if (incoming.length && !withDrill) {
         html += `<p><b>← 들어오는 전이</b> (${incoming.length}건)</p><ul>`;
         for (const inc of incoming) {
           html += `<li>L${inc.line} from <span class="mono">${esc(inc.from)}</span>: <code>${esc(inc.code)}</code></li>`;
@@ -551,6 +567,7 @@ function buildAllRunCaseIndex(runCases, devText, runSeqEnum) {
       if (c.errors.length) html += `<p><b>save_error_code</b>: ${c.errors.map((s) => `<code>${esc(s)}</code>`).join("<br>")}</p>`;
       html += `<pre class="code-sm">${esc(c.snippet)}</pre>`;
       html += `</details>`;
+      html += `</details>`;
     }
   }
 
@@ -560,10 +577,14 @@ function buildAllRunCaseIndex(runCases, devText, runSeqEnum) {
   if (rest.length) {
     html += `<h3 id="grp-misc">8. 기타 RunMode (${rest.length}개)</h3>`;
     for (const c of rest) {
-      html += `<details class="case-item"><summary class="mono">${esc(c.name)}</summary>`;
+      const incoming = findIncomingTransitions(devText, c.name);
+      html += `<details class="case-item drill-L0"><summary class="mono">${esc(c.name)}</summary>`;
+      if (withDrill && autoNarr) {
+        html += `<details class="drill-L1"><summary>▶ L1 — 맥락 해설</summary>${autoNarr.autoAnalyzeRunCase(c, incoming)}</details>`;
+      }
+      html += `<details class="drill-L2"><summary>▶ L2 — 소스</summary>`;
       html += `<p>L${c.line} → ${c.transitions.map(esc).join(", ") || "—"}</p>`;
-      html += `<pre class="code-sm">${esc(c.snippet)}</pre>`;
-      html += `</details>`;
+      html += `<pre class="code-sm">${esc(c.snippet)}</pre></details></details>`;
     }
   }
   return html;
