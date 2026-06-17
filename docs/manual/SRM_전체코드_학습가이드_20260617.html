@@ -1,0 +1,3152 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<title>SRM 전체코드 학습가이드 완전판 2026-06-17</title><style>
+    *{box-sizing:border-box}
+    body{font-family:"Malgun Gothic",sans-serif;margin:0;color:#111;line-height:1.65}
+    .layout{display:flex;min-height:100vh}
+    nav.sidebar{width:300px;background:#1a2e1f;color:#e8f0ea;position:sticky;top:0;height:100vh;overflow-y:auto;padding:14px;font-size:9pt;flex-shrink:0}
+    nav.sidebar a{color:#b8dcc8;text-decoration:none;display:block;padding:3px 8px;border-radius:4px}
+    nav.sidebar a:hover{background:#2a4a35;color:#fff}
+    nav.sidebar .part{color:#7ec99a;font-weight:700;margin:12px 0 4px;font-size:8pt}
+    main{flex:1;padding:24px 36px 100px;max-width:960px}
+    h1{font-size:20pt;border-bottom:4px solid #1a6b3c;padding-bottom:10px}
+    h2{font-size:14pt;background:#2c3e50;color:#fff;padding:10px 14px;margin:36px 0 14px;border-radius:4px}
+    h3{font-size:11.5pt;color:#1a5;border-left:5px solid #1a6b3c;padding-left:10px;margin:20px 0 8px}
+    .meta,.note,.warn,.goal{padding:12px 16px;margin:12px 0;border-radius:8px;font-size:10pt}
+    .meta{background:#f0f7f2}.note{background:#fafafa;border-left:4px solid #1a6b3c}
+    .warn{background:#fff8f0;border-left:4px solid #e67e22}
+    .goal{background:#e8f4ec;border:1px solid #b8d4c4}
+    pre.code{background:#1e2a22;color:#d4ecd8;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:8.5pt;line-height:1.45}
+    pre.code-sm{background:#f4f8f5;border:1px solid #ccc;padding:10px;overflow-x:auto;font-size:7.5pt;line-height:1.35;max-height:400px;overflow-y:auto}
+    .data-table{width:100%;border-collapse:collapse;font-size:9pt;margin:10px 0 18px}
+    .data-table th{background:#1a6b3c;color:#fff;padding:7px 9px;text-align:left}
+    .data-table td{border:1px solid #ddd;padding:6px 9px;vertical-align:top}
+    .data-table tr:nth-child(even){background:#fafcfa}
+    .mono{font-family:Consolas,monospace;color:#055;font-size:8.5pt}
+    .kind{font-size:8pt;color:#666}
+    .flow-box{background:#f5f5f5;border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+    .flow-pre{font-family:Consolas,monospace;font-size:8.5pt;margin:0;white-space:pre;line-height:1.5}
+    details.case-item{margin:6px 0;border:1px solid #ccc;border-radius:6px;padding:0 12px 10px;background:#fafafa}
+    details.case-item>summary{cursor:pointer;padding:8px 4px;list-style:none;font-size:9.5pt}
+    details.case-item>summary::-webkit-details-marker{display:none}
+    .mermaid-wrap{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:12px 0;overflow-x:auto}
+    .pattern-card{border:1px solid #c8e0d0;border-radius:8px;padding:12px;margin:10px 0;background:#fafcfa}
+    .trap-card{border-left:4px solid #e67e22;padding:8px 12px;margin:8px 0;background:#fffaf5}
+    a.ext{color:#1a6b3c}
+    @media print{nav.sidebar{display:none}main{max-width:100%}h2{page-break-before:always}}
+  </style></head>
+<body><div class="layout"><nav class="sidebar">
+<div class="part">시작</div>
+<a href="#intro">목적·읽는법</a>
+<a href="#curriculum">4주 로드맵</a>
+<a href="#layers">A. 데이터 3층 완전해설</a>
+<a href="#layers-time">A.2 시간순 T0→Tn</a>
+<a href="#store-save">A.4 Store vs Save</a>
+<div class="part">통신·시작</div>
+<a href="#rx41">B. 0x41 rxCmdOrder</a>
+<a href="#rx50">C. 0x50 Start</a>
+<a href="#mainloop">D. main 루프</a>
+<a href="#tml-all">H. TML 핸들러</a>
+<div class="part">상태머신</div>
+<a href="#prepare-deep">E. PREPARE·브레이크</a>
+<a href="#get-flow-table">F. GET 단계표</a>
+<a href="#runmode-all">G. RunMode case 전체</a>
+<a href="#fork-steps">J. 스텝 enum</a>
+<a href="#put-flow">F2. PUT 흐름</a>
+<a href="#files">K. 파일 맵</a>
+<a href="#struct8">L. 8대 구조체</a>
+<div class="part">함수·실전</div>
+<a href="#store-save-fns">I. Store/Save 함수</a>
+<a href="#patterns">코딩 패턴</a>
+<a href="#traps">명명 함정</a>
+<a href="#exercise">연습문제</a>
+<a href="#transfer">타 설비 이식</a>
+<a class="ext" href="SRM_전체심볼_용도사전.html">→ 심볼 사전</a>
+<a class="ext" href="SRM_구조체트리.html">→ 구조체 트리</a></nav><main>
+<h1>MX SRM 전체코드 학습가이드 — 완전판 <span style="font-size:13pt;color:#666">2026-06-17</span></h1>
+<div class="meta">
+  Ver 4.4 | RunMode case <b>113</b>개 추출 | dev_SRM.c <b>68,367</b>줄 |
+  com_tml.c <b>6,494</b>줄
+</div>
+
+<div class="goal" id="intro">
+<h3 style="margin-top:0;border:none;padding:0">이 문서의 목적</h3>
+<p><b>큰 흐름 → 작은 흐름</b> 순으로, AI 없이 이 펌웨어와 타 설비 제어를 스스로 짤 수 있게 하는 <b>완전판 학습 HTML</b>.</p>
+<ul>
+<li><b>Part A~I</b>: 개념·시간축·통신·상태머신 (사람이 쓴 해설)</li>
+<li><b>Part G</b>: dev_SRM.c에서 <b>자동 추출</b>한 113개 case 소스·전이</li>
+<li><b>심볼 사전</b>: Ctrl+F로 이름 검색 (<a href="SRM_전체심볼_용도사전.html">링크</a>)</li>
+</ul>
+<p><b>읽는 법</b>: A(3층·시간) → B(0x41) → C(0x50) → D(루프) → F(GET표) → G(case 펼치기)</p>
+</div>
+
+<h2 id="curriculum">4주 학습 로드맵</h2>
+<div class="note"><b>1주</b> Part A+D + 심볼사전 섹션0 |
+<b>2주</b> Part B+C+H (0x41/0x50) |
+<b>3주</b> Part E+F+G (PREPARE~GET case) |
+<b>4주</b> Part I + 연습 + case 주석 달기</div>
+
+<div class="mermaid-wrap"><pre class="mermaid">
+flowchart TB
+  subgraph G["지상반"]
+    A41["0x41 명령"]
+    A50["0x50 Start"]
+    A30["0x30 폴링"]
+  end
+  subgraph M["MCU"]
+    TML["com_tml"]
+    WD["m_WorkData"]
+    RM["SRM_RunMode"]
+    ST["m_St"]
+  end
+  A41-->TML-->WD
+  A50-->RM
+  RM-->ST
+  ST-->A30
+</pre></div>
+
+
+<h2 id="layers">Part A — 데이터 3층 (완전 해설)</h2>
+<div class="warn"><b>주의</b>: 아래 3층은 <b>동시에 한 줄로 흐르는 파이프가 아닙니다</b>.
+<b>역할(책임) 분리 + 시간축</b>입니다. 0x41 시점에 입력·출력이 <b>겹치기도</b> 합니다.</div>
+
+<h3 id="layers-roles">A.1 세 층의 역할</h3>
+<table class="data-table">
+<tr><th>층</th><th>한 줄</th><th>주요 변수</th><th>비유</th></tr>
+<tr><td><b>입력층</b></td><td>지상반 명령 → 실행 <b>레시피</b> 작성</td><td>WorkCmdSTR → m_WorkData[]</td><td>주문서 → 조리 지시서</td></tr>
+<tr><td><b>실행층</b></td><td>레시피 보고 모터·시퀀스 구동</td><td>SRM_RunMode, Sub_Run_Step, s_WorkInx</td><td>주방 조리</td></tr>
+<tr><td><b>출력층</b></td><td>지상반에 진행·에러 <b>보고</b></td><td>m_St → 0x30, m_BKSram.AlarmLog</td><td>진행률 표시</td></tr>
+</table>
+
+<h3 id="layers-time">A.2 시간순 — GET 1건 전체 (T0→Tn)</h3>
+<div class="flow-box"><pre class="flow-pre">[T0] 0x41 TY_CMD_ORDER ─────────────────── 입력층
+     com_tml.c  rxCmdOrder()                    (약 2340행)
+       ├─ 검증: STAND_BY? Auto? Fault? ForkCenter?
+       └─ SRM_Fork_Work_Cmd(pCmd)               dev_SRM.c 약 45936행
+            ├─ Store_Work_Data_1()  → m_WorkData[0],[1]…  ★ 실행 레시피
+            └─ Store_Fork_WorkStatus() → m_St.ForkWork[]  ★ 지상반 1차 기록
+     ※ 이 시점: 모터 안 움. RunMode = STAND_BY
+
+[T1] 0x50 TY_CMD_START ─────────────────── 입력→실행 연결
+     rxCmdStart() → SRM_Start_On()           (46806행)
+       ├─ m_St.SRM_Status1.StartOn = 1
+       └─ m_pgmEnv.SRM_RunMode = RUN_SEQ_START
+
+[T2] 매 while(1) ───────────────────────── 실행층 (super loop)
+     main.c → SRM_Manager() → SRM_Machine_Run_Process()  (58437행)
+       switch(SRM_RunMode) — case 한 스텝만 실행 후 break
+       ├─ m_WorkData[s_WorkInx] 읽음 (TargetPos, ForkAct…)
+       ├─ Motor_Brake / Auto_Ctr_Travel / Auto_Ctr_Lift
+       └─ Save_ForkWork_OrderProcess()  ────── 출력층 갱신
+
+[T3] 0x30 TY_STATUS_REQ (주기 폴링) ───── 출력층 읽기
+     rxStatusReq() → m_St 패킷 응답
+     Save가 바꿔둔 OrderProcess/Status가 지상반 화면에 표시</pre></div>
+
+<h3 id="layers-vars">A.3 층별 디버깅 — 무엇을 보나</h3>
+<table class="data-table">
+<tr><th>궁금한 것</th><th>볼 변수/함수</th><th>파일</th></tr>
+<tr><td>명령 받았나?</td><td>m_St.ForkWork[0].WorkNum_Fork, OrderProcess=CMD_FORK_STEP_RX</td><td>Store_Fork_WorkStatus</td></tr>
+<tr><td>뭘 실행하나?</td><td>m_WorkData[0].ForkAct, TargetPos, DrvData[]</td><td>dev_SRM.c static</td></tr>
+<tr><td>지금 어느 단계?</td><td>m_pgmEnv.SRM_RunMode</td><td>enumSRM_RUN_SEQ</td></tr>
+<tr><td>지상반 스텝?</td><td>m_St.ForkWork[0].OrderProcess_Fork</td><td>Save_ForkWork_*</td></tr>
+<tr><td>에러?</td><td>m_St.Fault, save_error_code, AlarmLog</td><td>alarm.c</td></tr>
+</table>
+
+<h3 id="store-save">A.4 Store_* vs Save_* (이름 같아서 지옥)</h3>
+<table class="data-table">
+<tr><th></th><th>Store_*</th><th>Save_*</th></tr>
+<tr><td><b>시점</b></td><td>주로 0x41 (SRM_Fork_Work_Cmd)</td><td>실행 중 RunMode case</td></tr>
+<tr><td><b>m_WorkData</b></td><td>✅ 채움 (TargetPos, ForkAct…)</td><td>❌ 거의 안 씀</td></tr>
+<tr><td><b>m_St</b></td><td>✅ Store_Fork_WorkStatus도 m_St 씀</td><td>✅ 스텝/상태 갱신</td></tr>
+<tr><td><b>BKPSRAM</b></td><td>일부</td><td>✅ saveBKSramBlock</td></tr>
+<tr><td><b>의미</b></td><td>명령 접수 + 실행 큐</td><td>돌면서 진행 보고</td></tr>
+</table>
+
+<h3 id="layers-diagram">A.5 수정된 흐름도 (겹침 표시)</h3>
+<div class="flow-box"><pre class="flow-pre">지상반                         MCU
+──────                         ───
+
+0x41 ──► rxCmdOrder
+           └─► Store ──► m_WorkData (실행 레시피)
+           └─► Store_Fork_WorkStatus ──► m_St (작업번호·RX)  ← 입력+출력 겹침
+
+         (대기: StartOn=0, RunMode=STAND_BY)
+
+0x50 ──► SRM_Start_On ──► RunMode=START
+                              │
+                              ▼
+                    SRM_Machine_Run_Process (매 루프)
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+         m_WorkData      인버터/EtherCAT    Save_* → m_St
+                                              │
+0x30 ◄────────────────────────────────────────┘ 폴링</pre></div>
+
+<h3 id="mpgmenv-mst">A.6 m_pgmEnv vs m_St</h3>
+<p><b>m_pgmEnv</b> (PGMEnvSTR): MCU 내부 전용. SRM_RunMode, timer1ms, 통신 링크, 내부 플래그.
+지상반 0x30에 <b>직접 안 나감</b>.</p>
+<p><b>m_St</b> (StatusSTR): 지상반 "얼굴". ForkWork[], Inv_St[], DI/DO, Fault.
+<b>Save_*</b>가 여기 씀 → 0x30 폴링.</p>
+<p><b>m_WorkData</b>: dev_SRM.c <code>static SRM_WorkDataSTR m_WorkData[30]</code> — extern 아님.
+상태머신만 접근하는 <b>실행 큐</b>.</p>
+
+
+<h2 id="rx41">Part B — 0x41 rxCmdOrder() 완전 추적</h2>
+<p><b>파일</b>: com_tml.c 약 <code>2340</code>행 <code>void rxCmdOrder()</code></p>
+
+<h3>B.1 진입 ~ 검증 (거부 사유)</h3>
+<ol>
+<li><code>pCmd = (WorkCmdSTR*)&amp;pCom-&gt;Data[0]</code> — 패킷 → 구조체</li>
+<li>Fault → COMMAND_ERROR_FALUT_STATE</li>
+<li>ManualSW → COMMAND_ERROR_MANUAL_SW_ON</li>
+<li><code>SRM_RunMode != RUN_SEQ_STAND_BY</code> → 이전 명령 실행 중</li>
+<li><code>Check_Fork_Center_Alarm()</code> → 포크 센터 이탈</li>
+<li>Auto==0 → 수동 모드</li>
+<li>GET/PUT 시 StartOn==0 → NON_ONLINE (온라인 아님)</li>
+<li>GoodsFlag 검사 (DISABLE_ERROR_CARRIER_GOODS_SENSOR로 생략 가능)</li>
+<li>CheckCmdCellPosition, 금지랙, 스페셜랙</li>
+</ol>
+
+<h3>B.2 수락 시 — SRM_Fork_Work_Cmd()</h3>
+<p><code>ret_value[0] = SRM_Fork_Work_Cmd(pCmd)</code> — dev_SRM.c 약 45936행</p>
+<ul>
+<li>OrderCode별 From/To 좌표 → TravPos/LiftPos 계산</li>
+<li><code>Store_Work_Data_1()</code> — GET+PUT면 m_WorkData에 2슬롯 (From GET, To PUT)</li>
+<li><code>Store_Fork_WorkStatus()</code> — m_St.ForkWork[0]에 WorkNum, OrderCode, RX 스텝</li>
+<li>Store_Work_Data 내부에서 From_Cell/To_Cell을 m_St에 memcpy하기도 함</li>
+</ul>
+
+<h3>B.3 0x41 직후 상태</h3>
+<table class="data-table">
+<tr><th>항목</th><th>값</th></tr>
+<tr><td>RunMode</td><td>STAND_BY (아직 Start 전)</td></tr>
+<tr><td>m_WorkData</td><td>채워짐 (실행 대기)</td></tr>
+<tr><td>m_St.ForkWork</td><td>WorkNum, OrderCode, OrderProcess=RX</td></tr>
+<tr><td>모터</td><td>안 움</td></tr>
+</table>
+
+
+<h2 id="rx50">Part C — 0x50 Start / SRM_Start_On()</h2>
+<p><code>rxCmdStart()</code> com_tml.c 2825행 → <code>SRM_Start_On()</code> dev_SRM.c 46806행</p>
+
+<h3>C.1 Start 거부 조건</h3>
+<ul>
+<li>OrderRejectCondition (비상/안전플러그)</li>
+<li>Fault, !Auto</li>
+<li>이미 StartOn==1 (NON_ONLINE)</li>
+<li>포크 센터 이탈</li>
+<li>RunMode != STAND_BY</li>
+</ul>
+
+<h3>C.2 Start 성공 시</h3>
+<ul>
+<li><code>m_St.SRM_Status1.Bit.StartOn = 1</code></li>
+<li><code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START</code> (47431행 근처)</li>
+<li>WorkInfo → BKPSRAM 저장</li>
+</ul>
+
+<h3>C.3 RUN_SEQ_START case (58792행~)</h3>
+<ul>
+<li><code>s_WorkInx = 0</code> (또는 TaskMode면 SRM_TaskIndex)</li>
+<li>스테이션/Row_ID → Move_PosFlag 설정</li>
+<li><code>m_WorkData[s_WorkInx].ForkAct</code>에 따라 PREPARE / LOADING_START / UNLOADING_START 분기</li>
+</ul>
+
+
+<h2 id="mainloop">Part D — main 루프 · Manager · 타이머</h2>
+<pre class="code">// main.c while(1) — 협력적 super loop (RTOS 아님)
+AlarmManager();       // DI/DO, 에러
+TMLComManager();      // ★ UART 수신 → rxCmdOrder/Start/Status
+ECAT_Manager();       // ★ 인버터 PDO
+SRM_Manager();        // ★ SRM_Machine_Run_Process()
+
+// 1ms ISR (main.c)
+m_pgmEnv.timer1ms++;  // 모든 getCalcTimer1ms()의 시계</pre>
+
+<h3>D.1 SRM_Manager() (67918행)</h3>
+<ol>
+<li>Scan_Digital_Input_Chattering()</li>
+<li>SRM_Machine_Process() — SSR/연결</li>
+<li><b>SRM_Machine_Run_Process()</b> — 상태머신 본체</li>
+<li>HMI_ModbusTCP_Proc()</li>
+</ol>
+
+<h3>D.2 SRM_Machine_Run_Process() static 변수 (58463행~)</h3>
+<table class="data-table">
+<tr><th>변수</th><th>역할</th></tr>
+<tr><td>s_WorkInx</td><td>현재 m_WorkData 인덱스</td></tr>
+<tr><td>s_Work_Fork_Flag</td><td>포크1/2 동시 작업 비트</td></tr>
+<tr><td>s_No_movement</td><td>주행·승강 스킵, 포크만</td></tr>
+<tr><td>s_Delay_Time</td><td>Read_DelayTime() 결과 ms</td></tr>
+<tr><td>s_Brake_Release_Retry</td><td>브레이크 해제 재시도</td></tr>
+</table>
+
+
+<h2 id="prepare-deep">Part E — PREPARE_MOVE · 브레이크 해제 (상세)</h2>
+
+<h3>E.1 RUN_SEQ_PREPARE_MOVE_0</h3>
+<ol>
+<li><code>Check_Trav_lift_In_Postion(s_WorkInx)</code> — 목표 도착?</li>
+<li><code>Rack_fork_obstruction != 0</code> — InPosition이어도 재이동 (WCS 스킵 방지)</li>
+<li>이동 필요: StartPos←Current_Pos, Move_Dir←Check_Trav/Lift_Move_Dir</li>
+<li><code>Save_ForkWork_OrderProcess(MOVING_FROM/TO)</code></li>
+<li>ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE → BRAKE_RELEASE_0 else MOVE_BEFORE_DELAY</li>
+</ol>
+
+<h3>E.2 RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</h3>
+<pre class="code">nFlag = 0;
+if (Get_Motor_Brake_Release(INV_TRAVEL))  nFlag |= cbits[0]; // bit0=주행
+if (Get_Motor_Brake_Release(INV_HOIST))     nFlag |= cbits[1]; // bit1=승강
+// nFlag: 0x00=둘다미해제, 0x01=주행, 0x02=승강, 0x03=둘다해제
+// 3초 내 nFlag==0x03 → MOVE_BEFORE_DELAY
+// 타임아웃 → save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag)</pre>
+<p><code>Get_Motor_Brake_Release</code> 1124행: 1=Brake Off(해제), 0=Brake On</p>
+
+<h2 id="get-flow-table">Part F — GET(적재) 단계별 RunMode 표</h2><table class="data-table">
+<tr><th>#</th><th>RunMode</th><th>하는 일</th><th>Save 보고(개요)</th></tr><tr><td>1</td><td class="mono">RUN_SEQ_PREPARE_MOVE_0</td><td>화물검증, InPosition, StartPos/TargetPos 계산</td><td class="mono">Save_ForkWork_OrderProcess(MOVING_FROM)</td></tr><tr><td>2</td><td class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</td><td>주행·승강 브레이크 해제 확인 (nFlag 0x03)</td><td class="mono">—</td></tr><tr><td>3</td><td class="mono">RUN_SEQ_MOVE_BEFORE_DELAY</td><td>Read_DelayTime(PREFORE_MOVE) 대기</td><td class="mono">—</td></tr><tr><td>4</td><td class="mono">RUN_SEQ_START_MOVE_0</td><td>Auto_Ctr_Travel/Lift 명령</td><td class="mono">—</td></tr><tr><td>5</td><td class="mono">RUN_SEQ_TRAV_LIFT_MOVING</td><td>이동 중, 도착/InPosition 검사</td><td class="mono">MOVING_FROM/TO</td></tr><tr><td>6</td><td class="mono">RUN_SEQ_TRAV_LIFT_AFTER_MOVE</td><td>이동 후 안정화</td><td class="mono">ARRIVED_FROM</td></tr><tr><td>7</td><td class="mono">RUN_SEQ_LOADING_INTERLOCK</td><td>스테이션 CV 인터록</td><td class="mono">—</td></tr><tr><td>8</td><td class="mono">RUN_SEQ_LOADING_PRE_FORK_OUT</td><td>포크 진출 전 딜레이</td><td class="mono">PRE_OUT</td></tr><tr><td>9</td><td class="mono">RUN_SEQ_LOADING_FORK_OUT</td><td>m_Fork_Sub_Run_Step 포크 진출</td><td class="mono">FORK_OUT</td></tr><tr><td>10</td><td class="mono">RUN_SEQ_LOADING_FORK_OUT_LIFT_UP</td><td>리프트 업</td><td class="mono">LIFT_UP</td></tr><tr><td>11</td><td class="mono">RUN_SEQ_LOADING_FORK_IN</td><td>포크 복귀(센터)</td><td class="mono">FORK_IN</td></tr><tr><td>12</td><td class="mono">RUN_SEQ_LOADING_COMPLETE</td><td>GOX 화물센서 확인</td><td class="mono">WORK_STATUS_COMPLETE</td></tr></table><p>PUT(UNLOADING_*)는 LIFT_UP→LIFT_DOWN 등 대칭. dev_SRM.h enum 50번대.</p>
+<h2 id="put-flow">Part F2 — PUT(이재) 단계</h2><table class="data-table"><tr><th>#</th><th>RunMode</th><th>하는 일</th></tr><tr><td>1</td><td class="mono">RUN_SEQ_UNLOADING_START</td><td>PUT 분기 진입, 화물 있음 검사</td></tr><tr><td>2</td><td class="mono">RUN_SEQ_UNLOADING_INTERLOCK</td><td>스테이션 인터록</td></tr><tr><td>3</td><td class="mono">RUN_SEQ_UNLOADING_PRE_FORK_OUT</td><td>포크 진출 전 딜레이</td></tr><tr><td>4</td><td class="mono">RUN_SEQ_UNLOADING_FORK_OUT</td><td>포크 To 랙 진출</td></tr><tr><td>5</td><td class="mono">RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN</td><td>리프트 다운(이재)</td></tr><tr><td>6</td><td class="mono">RUN_SEQ_UNLOADING_FORK_IN</td><td>포크 복귀</td></tr><tr><td>7</td><td class="mono">RUN_SEQ_UNLOADING_COMPLETE</td><td>공출고/화물 없음 확인</td></tr></table>
+<h2 id="runmode-all">Part G — RunMode case 전체 (113개, 코드 추출)</h2>
+<div class="note">각 case 클릭 → dev_SRM.c 소스 일부, 다음 RunMode, Save/에러 호출, <b>누가 이 case로 들어오나</b></div><h3 id="grp-standby">0. 대기·시작</h3><details class="case-item" id="case_RUN_SEQ_STAND_BY"><summary><span class="mono">RUN_SEQ_STAND_BY</span> <span class="kind">dev_SRM.c:58632</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L30931 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L31513 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L31644 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L32035 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L32543 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L32682 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L34161 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li><li>L34400 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 0);</code></p><pre class="code-sm">	case RUN_SEQ_STAND_BY: //Stand by 모드
+		if (m_pgmEnv.System_Reset_Flag == 0)
+		{
+			m_pgmEnv.System_Reset_Flag = 1;
+			/*
+			if (m_pgmEnv.SRM_Complete_Machine_State == 2)
+			{
+				m_pgmEnv.System_Reset_Flag = 1;
+
+				if (m_pgmEnv.Fork_Encoder_Type == FORK_ENC_INCREMENTAL)
+				{
+					if (m_St.Inv_St[INV_FORK_1].Status2.IPOS_ref == 0)
+					{
+						// 메인 전원 리셋시, 포크 원점 설정이 초기화 됨.
+						// 포크 원점 설정 동작 실행.
+						control_SRM_reference_Start(INV_FORK_1);
+					}
+				}
+				else
+				{
+					m_pgmEnv.System_Reset_Flag = 1;
+				}
+			}
+			else if (m_pgmEnv.SRM_Complete_Machine_State == 1)
+			{
+				m_pgmEnv.System_Reset_Flag = 1;
+			}
+			*/
+		}
+		else
+		{
+			m_pgmEnv.Limit_Run_Mode = 0;
+
+			m_Manual_Ctr_Flag = MAN_CTR_NONE;
+
+			//Save_LastPosition_Proc();
+
+			Update_Invertor_Param();	// Reference Offset, Position Gain, Position Window 값 갱신
+
+			m_pgmEnv.Home_Lamp_Flag = 0;
+
+			if (m_St.SRM_Mode.Bit.Auto) //오토가 켜져있으면 작업요구 비트를 살린다(지상반에 알림)
+			{
+				m_St.SRM_Status1.Bit.RequestWork = 1;
+			}
+			else // 꺼져있으면 작업요구 비트를 끈다.
+			{
+				m_St.SRM_Status1.Bit.RequestWork = 0;
+			}
+
+			if (m_pgmEnv.Station_Error_No) //에러가 나면
+			{
+				if (m_St.PosFork1.Position2.Bit.ForkCenter) //포크가 센터이면서, 스테이션 인터록모드 0일때, 에러넘버 0
+				{
+					if (m_pgmEnv.InterlockMode == ST_INTERLOCK_MODE_0)
+					{
+						Station_Interlock_Control(m_pgmEnv.Station_Error_No, 0);
+					}
+					else
+					{
+						Clear_Station_Interlock_Contol();
+					}
+
+					m_pgmEnv.Station_Error_No = 0;
+				}
+			}
+			else
+			{
+				if (m_St.SRM_Mode.Bit.Manual)
+				{
+					if (m_St.PosFork1.Position2.Bit.ForkCenter)
+					{
+						if (m_pgmEnv.InterlockMode == ST_INTERLOCK_MODE_0)
+						{
+							for (i = 0; i &lt; m_ExtSEnv1.StationEnv.TotalUseCnt; i++)
+							{
+								if (Get_Station_Interlock_CVNO_State(i))
+								{
+									Station_Interlock_Control(m_St.PosFork1.St_No, 0);
+								}
+							}
+						}
+						else
+						{
+							Clear_Station_Interlock_Contol();
+						}
+					}
+				}
+			}
+
+			// Sub 동작 스텝 초기화
+			m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+			m_Fork_Sub_Run_Error = 0;
+
+			m_Trav_Sub_Run_Step = 0;
+			m_Trav_Sub_Run_Retry = 0;
+			m_Trav_Sub_Run_Error = 0;
+
+			m_Lift_Sub_Run_Step = 0;
+			m_Lift_Sub_Run_Retry = 0;
+			m_Lift_Sub_Run_Error = 0;
+
+			m_pgmEnv.Start_Off_Flag = 0;
+
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			if (m_pgmEnv.NormalStopFlag)
+			{
+				save_error_code(ERROR1_EMBERGENCY_STOP, 3, 0);
+			}
+
+			m_pgmEnv.NormalStopFlag = 0;
+			m_pgmEnv.EmergencyStopFlag = 0;
+			m_pgmEnv.Fork_EmergencyStop = 0;
+
+			m_St.Inv_St[INV_TRAVEL].Status1.GoodsFlag_Or_MoveHome = 0;
+			m_St.Inv_St[INV_HOIST].Status1.GoodsFlag_Or_MoveHome = 0;
+</pre></details><details class="case-item" id="case_RUN_SEQ_START"><summary><span class="mono">RUN_SEQ_START</span> <span class="kind">dev_SRM.c:58792</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L45572 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L45622 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L45674 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L45761 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L46744 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L47431 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START;</code></li><li>L59148 from <span class="mono">RUN_SEQ_MOVE_BEFORE_DELAY</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START_MOVE_0;</code></li><li>L59341 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START_MOVE_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_PREPARE_MOVE_0</span></p><pre class="code-sm">	case RUN_SEQ_START:
+
+#if DEBUG_INVERTER_SIMULATION
+		asm volatile("NOP");
+#else
+		nFlag = Check_Fork_Center_Alarm();
+
+		if (nFlag)
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (m_pgmEnv.SRM_TaskMode)
+			{
+				s_WorkInx = m_pgmEnv.SRM_TaskIndex;
+
+				m_St.Task_Operation = 1;
+				m_St.TaskWork[s_WorkInx].OrderState = TASK_STATUS_DOING;
+			}
+			else
+			{
+				s_WorkInx = 0;
+			}
+
+			m_St.SRM_Status1.Bit.RequestWork = 0;
+
+			m_pgmEnv.Buzzer_OneShot = 1;
+
+
+			if (m_WorkData[s_WorkInx].Station_No &gt; 0)
+			{
+				nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+				if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+				}
+				else
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+				}
+			}
+			else
+			{
+				m_St.PosFork1.Row_ID = m_WorkData[s_WorkInx].TargetPos.Row_ID;
+
+				if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+				{
+					if (m_St.PosFork1.Row_ID == 1)
+					{
+						m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+					}
+					else
+					{
+						m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+					}
+				}
+				else
+				{
+					if ((m_St.PosFork1.Row_ID == 1) || (m_St.PosFork1.Row_ID == 2))
+					{
+						m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+					}
+					else
+					{
+						m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+					}
+				}
+			}
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_0;
+		}
+#endif
+		break;</pre></details><h3 id="grp-prepare">1. 이동 준비·주행승강</h3><details class="case-item" id="case_RUN_SEQ_PREPARE_MOVE_0"><summary><span class="mono">RUN_SEQ_PREPARE_MOVE_0</span> <span class="kind">dev_SRM.c:58868</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L58863 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_0;</code></li><li>L62578 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_0;</code></li><li>L62676 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span></p><p><b>Save_*</b>: <code>Save_ForkMove_OrderStatus(0, WORK_STATUS_DOING); //mcu, ram, 지상반에 모두 현재의 상태를 '작업중'으로 바꿔서 써준다.</code><br><code>Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_MOVING);//mcu, ram, 지상반에 모두 현재의 상태를 '이동시작전'으로 바꿔서 써준다.</code><br><code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_MOVING_FROM); // mcu, ram, 지상반에 모두 현재의 상태를 '포크이동전 단계'로 바꿔서 써준다.</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_LOADED_GOODS, 1, 1); //에러를 띄운다</code></p><pre class="code-sm">	case RUN_SEQ_PREPARE_MOVE_0:
+		//clearGraph();
+
+		if (m_WorkData[s_WorkInx].ForkAct == WORK_MOVE_ONLY) // 작업데이터의 포크상태가 이동만 가능한 상태이면
+		{
+			Save_ForkMove_OrderStatus(0, WORK_STATUS_DOING); //mcu, ram, 지상반에 모두 현재의 상태를 '작업중'으로 바꿔서 써준다.
+			Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_MOVING);//mcu, ram, 지상반에 모두 현재의 상태를 '이동시작전'으로 바꿔서 써준다.
+		}
+		else if (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_GET) // 작업데이터의 포크1 상태가 적재 작업인 경우면
+		{
+			if (m_WorkData[s_WorkInx].Not_Check_Goods) // Not_Check_Goods 비트가 1이면 공입공출고 체크 안함.
+			{
+				Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_MOVING_FROM); // mcu, ram, 지상반에 모두 현재의 상태를 '포크이동전 단계'로 바꿔서 써준다.
+			}
+			else //화물체크를 하는경우
+			{
+				if (m_St.Inv_St[INV_FORK_1].Status1.GoodsFlag_Or_MoveHome)//주행 승강 홈복귀하는하면
+				{
+					save_error_code(ERROR1_LOADED_GOODS, 1, 1); //에러를 띄운다
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP; //주행승강정지 빝트를 에러 변수에 보낸다
+					break;</pre></details><details class="case-item" id="case_RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0"><summary><span class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</span> <span class="kind">dev_SRM.c:59051</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L58997 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0; //브레이크 풀렸는지 확인</code></li><li>L59044 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0; //브레이크 개방 준비 시퀀스</code></li><li>L59130 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1</span>, <span class="mono">RUN_SEQ_MOVE_BEFORE_DELAY</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag);</code></p><pre class="code-sm">	case RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0: //브레이크 개방준비 시퀀스
+		nFlag = 0;
+		if (Get_Motor_Brake_Release(INV_TRAVEL)) // 주행인버터 브레이크 개방상태 받음
+		{
+			nFlag |= cbits[0]; // 0x00 주행 승강 브레이크 둘다 미해제
+			                   // 0x01 주행만 해제됨
+			                   // 0x02 승강만 해제됨
+			                   // 0x03 둘 다 해제됨
+		}
+
+		if (Get_Motor_Brake_Release(INV_HOIST))
+		{
+			nFlag |= cbits[1]; // 0x00 주행 승강 브레이크 둘다 미해제
+		                       // 0x01 주행만 해제됨
+	                           // 0x02 승강만 해제됨
+	                           // 0x03 둘 다 해제됨
+		}
+
+		//m_TestStatus.St[DEBUG_STR_20] = nFlag;
+
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 3000) //3초이상이 흐르면
+		{
+			++s_Brake_Release_Retry; // 리트라이 횟수 증가
+			if (s_Brake_Release_Retry &gt; nDef_Error_Brake_Release_Retry) //에러횟수보다 리트라이 횟수가 크면
+			{
+				s_Brake_Release_Retry = 0; // 리트라이 횟수를 초기화 한다
+
+				// 80-1 브레이크 해제 이상
+				save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else// 정상이면
+			{
+				if ((nFlag &amp; cbits[0]) == 0) //주행 브레이크 해제인경우
+				{
+					Motor_Brake_Enable(INV_TRAVEL);// 주행 브레이크 해제 ON
+				}
+
+				if ((nFlag &amp; cbits[1]) == 0) // 승강 브레이크 해제인 경우
+				{
+					Motor_Brake_Enable(INV_HOIST); //승강브레이크 해제 ON
+				}
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1; //브레이크개방 이전 시퀀스 반환
+			}
+		}
+		else
+		{
+			if (nFlag == 0x03)
+			{
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1"><summary><span class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1</span> <span class="kind">dev_SRM.c:59108</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59095 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1; //브레이크개방 이전 시퀀스 반환</code></li><li>L62967 from <span class="mono">(함수/초기화)</span>: <code>//m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</span></p><pre class="code-sm">	case RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 1000)
+		{
+			if (Get_Motor_Brake_Release(INV_TRAVEL))
+			{
+				asm volatile("NOP");
+			}
+			else
+			{
+				Motor_Brake_Release(INV_TRAVEL);
+			}
+
+			if (Get_Motor_Brake_Release(INV_HOIST))
+			{
+				asm volatile("NOP");
+			}
+			else
+			{
+				Motor_Brake_Release(INV_HOIST);
+			}
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_MOVE_BEFORE_DELAY"><summary><span class="mono">RUN_SEQ_MOVE_BEFORE_DELAY</span> <span class="kind">dev_SRM.c:59134</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L58999 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY; //이동전 대기시간줌</code></li><li>L59046 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;//m_pgmEnv -&gt; mcu 안에서만 쓰는 두뇌상태</code></li><li>L59103 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_START_MOVE_0</span></p><pre class="code-sm">	case RUN_SEQ_MOVE_BEFORE_DELAY: // Move Before Delay
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Retry_Count = 0;
+
+			/*
+			m_TestStatus.Ctrl[DEBUG_CTR_12] = m_WorkData[s_WorkInx].DrvData[INV_TRAV].TargetPos;
+			m_TestStatus.Ctrl[DEBUG_CTR_13] = 0;
+			m_TestStatus.Ctrl[DEBUG_CTR_14] = 0;
+			m_TestStatus.Ctrl[DEBUG_CTR_15] = 0;
+			m_TestStatus.Ctrl[DEBUG_CTR_16] = 0;
+			*/
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_START_MOVE_0;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_START_MOVE_0"><summary><span class="mono">RUN_SEQ_START_MOVE_0</span> <span class="kind">dev_SRM.c:59152</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59148 from <span class="mono">RUN_SEQ_MOVE_BEFORE_DELAY</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START_MOVE_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_TRAV_LIFT_AFTER_MOVE</span></p><pre class="code-sm">	case RUN_SEQ_START_MOVE_0:
+		if (m_pgmEnv.Move_Home_Flag || m_pgmEnv.Move_Maintanence_Flag)//원점복귀이거나 보수위치 이동일떄
+		{
+			if (Check_Trav_lift_In_Postion(s_WorkInx))// 인포지션값 체크
+			{
+				s_No_movement = 1;
+				s_Check_InPos_Retry = 0;
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;
+				break;</pre></details><details class="case-item" id="case_RUN_SEQ_START_MOVE_1"><summary><span class="mono">RUN_SEQ_START_MOVE_1</span> <span class="kind">dev_SRM.c:59344</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59341 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START_MOVE_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_TRAV_LIFT_MOVING</span></p><pre class="code-sm">	case RUN_SEQ_START_MOVE_1:
+		m_Trav_Sub_Run_Step = 0;
+		m_Trav_Sub_Run_Retry = 0;
+		m_Trav_Sub_Run_Error = 0;
+
+		m_Lift_Sub_Run_Step = 0;
+		m_Lift_Sub_Run_Retry = 0;
+		m_Lift_Sub_Run_Error = 0;
+
+		nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+		if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+		{
+			m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+		}
+		else
+		{
+			m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+		}
+
+		s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_TRAV_LIFT);
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_MOVING;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_TRAV_LIFT_MOVING"><summary><span class="mono">RUN_SEQ_TRAV_LIFT_MOVING</span> <span class="kind">dev_SRM.c:59368</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59365 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_MOVING;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span></p><pre class="code-sm">	case RUN_SEQ_TRAV_LIFT_MOVING:
+		if (Check_SRM_Error_State())
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			break;</pre></details><details class="case-item" id="case_RUN_SEQ_TRAV_LIFT_STABILZATION_TIME"><summary><span class="mono">RUN_SEQ_TRAV_LIFT_STABILZATION_TIME</span> <span class="kind">dev_SRM.c:59460</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59413 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_STABILZATION_TIME;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_TRAV_LIFT_AFTER_MOVE</span></p><pre class="code-sm">	case RUN_SEQ_TRAV_LIFT_STABILZATION_TIME:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_MOVE);
+
+			s_Check_InPos_Retry = 0;
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_TRAV_LIFT_AFTER_MOVE"><summary><span class="mono">RUN_SEQ_TRAV_LIFT_AFTER_MOVE</span> <span class="kind">dev_SRM.c:59471</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59021 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE; //승강동작 이후 시쿠너스</code></li><li>L59161 from <span class="mono">RUN_SEQ_START_MOVE_0</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;</code></li><li>L59403 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;</code></li><li>L59418 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;</code></li><li>L59467 from <span class="mono">RUN_SEQ_TRAV_LIFT_STABILZATION_TIME</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_COMPLETE</span></p><p><b>Save_*</b>: <code>Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);</code><br><code>Save_ForkMove_OrderStatus(0, WORK_STATUS_COMPLETE);</code><br><code>Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);</code><br><code>Save_ForkMove_OrderStatus(0, WORK_STATUS_COMPLETE);</code><br><code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_ARRIVED_FROM);</code></p><pre class="code-sm">	case RUN_SEQ_TRAV_LIFT_AFTER_MOVE:
+		//(s_No_movement) ? (delay_time = 100) : (delay_time = s_Delay_Time);
+		(s_No_movement) ? (delay_time = DEF_DELAY_AFTER_MOVE) : (delay_time = s_Delay_Time);
+
+		//m_TestStatus.St[DEBUG_STR_31] = delay_time;
+		//m_TestStatus.St[DEBUG_STR_32] = getCalcTimer1ms(m_pgmEnv.SRM_RunTimer);
+
+		if (m_WorkData[s_WorkInx].Station_No &gt; 0)
+		{
+			nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+			if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+			{
+				m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+			}
+			else
+			{
+				m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+			}
+		}
+		else
+		{
+			m_St.PosFork1.Row_ID = m_WorkData[s_WorkInx].TargetPos.Row_ID;
+			if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+			{
+				if (m_St.PosFork1.Row_ID == 1)
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+				}
+				else
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+				}
+			}
+			else
+			{
+				if ((m_St.PosFork1.Row_ID == 1) || (m_St.PosFork1.Row_ID == 2))
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+				}
+				else
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+				}
+			}
+		}
+
+		/*
+		m_TestStatus.St[DEBUG_STR_10] = s_No_movement;
+		m_TestStatus.St[DEBUG_STR_11] = delay_time;
+		m_TestStatus.St[DEBUG_STR_12] = getCalcTimer1ms(m_pgmEnv.SRM_RunTimer);
+		m_TestStatus.St[DEBUG_STR_13] = m_St.PosFork1.Row_ID;
+		m_TestStatus.St[DEBUG_STR_14] = m_pgmEnv.Move_PosFlag;
+		*/
+
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= delay_time)
+		{
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+
+			if (m_pgmEnv.Move_Maintanence_Flag)
+			{
+				Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);
+
+				Save_ForkMove_OrderStatus(0, WORK_STATUS_COMPLETE);
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;
+			}
+			else if (m_WorkData[s_WorkInx].Rack_fork_obstruction == 1)
+			{
+				Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);
+
+				Save_ForkMove_OrderStatus(0, WORK_STATUS_COMPLETE);
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;
+			}
+			else
+			{
+				if (s_Check_InPos_Retry == 0)
+				{
+					// 1st 정위치 확인 시에는 정위치 Offset 만 적용
+					nTrav_TargetPos_Upper = m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos + nTrav_InPos_Tolerance;
+					nTrav_TargetPos_Lower = m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos - nTrav_InPos_Tolerance;
+
+					nLift_TargetPos_Upper = m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos + nLift_InPos_Tolerance;
+					nLift_TargetPos_Lower = m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos - nLift_InPos_Tolerance;
+				}
+				else
+				{
+					// 재 확인 시 Hysteresis 적용하여 정위치 판단.
+					nTrav_TargetPos_Upper = m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos + nTrav_InPos_Tolerance + nTrav_InPos_Hysteresis;
+					nTrav_TargetPos_Lower = m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos - nTrav_InPos_Tolerance - nTrav_InPos_Hysteresis;
+
+					nLift_TargetPos_Upper = m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos + nLift_InPos_Tolerance + nLift_InPos_Hysteresis;
+					nLift_TargetPos_Lower = m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos - nLift_InPos_Tolerance - nLift_InPos_Hysteresis;
+				}
+
+
+				//m_TestStatus.Ctrl[DEBUG_CTR_14] = m_St.Inv_St[INV_TRAV].Current_Pos;
+				/*
+				m_TestStatus.St[DEBUG_STR_20] = nTrav_TargetPos_Upper;
+				m_TestStatus.St[DEBUG_STR_21] = nTrav_TargetPos_Lower;
+				m_TestStatus.St[DEBUG_STR_22] = nLift_TargetPos_Upper;
+				m_TestStatus.St[DEBUG_STR_23] = nLift_TargetPos_Lower;
+				m_TestStatus.St[DEBUG_STR_24] = m_St.PosFork1.Position1.Data;
+				m_TestStatus.St[DEBUG_STR_25] = s_Check_InPos_Retry;
+				m_TestStatus.St[DEBUG_STR_26] = m_WorkData[s_WorkInx].ForkAct;
+				m_TestStatus.St[DEBUG_STR_27] = s_WorkInx;
+				m_TestStatus.St[DEBUG_STR_28] = delay_time;
+				*/
+
+				switch (m_WorkData[s_WorkInx].ForkAct)
+				{
+				case  WORK_FORK1_GET:
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_ARRIVED_FROM);
+					break;</pre></details><details class="case-item" id="case_RUN_SEQ_FORK_START"><summary><span class="mono">RUN_SEQ_FORK_START</span> <span class="kind">dev_SRM.c:60416</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60410 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_START;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_LOADING_START</span></p><p><b>Save_*</b>: <code>//Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_FROM);</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 3);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 3);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 1);</code></p><pre class="code-sm">	case RUN_SEQ_FORK_START:
+		if (m_pgmEnv.Start_Off_Flag)
+		{
+			//m_pgmEnv.Start_Off_Flag = 0;
+			/*
+#if DEBUG_CYCLE_STOP
+			save_error_code(ERROR1_EMBERGENCY_STOP, 3, 3);
+#else
+			if (m_ExtSEnv2.CtrParam.StartOff_AlarmFlag == 1)
+			{
+				save_error_code(ERROR1_EMBERGENCY_STOP, 3, 3);
+			}
+#endif
+			*/
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else if (m_pgmEnv.NormalStopFlag)
+		{
+			save_error_code(ERROR1_EMBERGENCY_STOP, 3, 1);
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			switch (m_WorkData[s_WorkInx].ForkAct)
+			{
+			case  WORK_FORK1_GET:
+				//Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_FROM);
+				s_Work_Fork_Flag = 0x01;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_START;
+				break;</pre></details><h3 id="grp-loading">2. 적재 GET</h3><details class="case-item" id="case_RUN_SEQ_LOADING_START"><summary><span class="mono">RUN_SEQ_LOADING_START</span> <span class="kind">dev_SRM.c:60478</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60446 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_START;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LOADING_INTERLOCK_NO_USE</span>, <span class="mono">RUN_SEQ_LOADING_INTERLOCK</span></p><pre class="code-sm">	case RUN_SEQ_LOADING_START:
+		if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+		{
+			Motor_Brake_Enable(INV_HOIST);
+		}
+		else
+		{
+			//if (!m_SRM_TxPDO[INV_HOIST].StatusWord.B.ReleaseBrake)
+			if (Get_Motor_Brake_Release(INV_HOIST) == 0)
+			{
+				Motor_Brake_Release(INV_HOIST);
+			}
+		}
+
+		s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_WAIT_INTERLOCK);
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		if (m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag)
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_INTERLOCK_NO_USE;
+		}
+		else
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_INTERLOCK;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_INTERLOCK"><summary><span class="mono">RUN_SEQ_LOADING_INTERLOCK</span> <span class="kind">dev_SRM.c:60506</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60497 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_INTERLOCK_NO_USE;</code></li><li>L60501 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_INTERLOCK;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_LOADING_PRE_FORK_OUT</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_STATION_INTERLOCK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_INTERLOCK:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			save_error_code(ERROR1_STATION_INTERLOCK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (m_WorkData[s_WorkInx].IsStation &amp;&amp; m_ExtSEnv1.StationEnv.InterLock_Type)
+			{
+				//if (Check_Station_CVOK(m_WorkData[s_WorkInx].Station_No))
+				if (Check_AutoMode_Station_CVOK_Rev2(m_WorkData[s_WorkInx].Station_No, m_WorkData[s_WorkInx].ForkAct))
+				{
+					//Station_Interlock_Control(m_WorkData[s_WorkInx].Station_No, 1);
+					Station_AutoMode_Interlock_Control(m_WorkData[s_WorkInx].Station_No, 1, m_WorkData[s_WorkInx].ForkAct);
+
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;
+				}
+			}
+			else
+			{
+				s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT);
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_INTERLOCK_NO_USE"><summary><span class="mono">RUN_SEQ_LOADING_INTERLOCK_NO_USE</span> <span class="kind">dev_SRM.c:60538</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60497 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_INTERLOCK_NO_USE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LOADING_PRE_FORK_OUT</span></p><pre class="code-sm">	case RUN_SEQ_LOADING_INTERLOCK_NO_USE:
+		s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT);
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_PRE_FORK_OUT"><summary><span class="mono">RUN_SEQ_LOADING_PRE_FORK_OUT</span> <span class="kind">dev_SRM.c:60545</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60525 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;</code></li><li>L60533 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;</code></li><li>L60542 from <span class="mono">RUN_SEQ_LOADING_INTERLOCK_NO_USE</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_OUT;</code></li></ul><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_FROM);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_PRE_FORK_OUT:
+		nFlag = 0;
+		if (m_WorkData[s_WorkInx].IsStation)
+		{
+			asm volatile("NOP");
+		}
+		else
+		{
+			if ((m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_2POS) \
+				|| (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_3POS))
+			{
+				// 더블딥
+				if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 1)  // Left
+				{
+					if (Check_ODSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nFlag = 1;
+				}
+				else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 4)  // Leftㄴ
+				{
+					if (Check_ODSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nFlag = 2;
+				}
+			}
+			else
+			{
+				//싱글딥
+				if (checkFusingString((INT08U*)m_ExtSEnv.mDevice.ProjectID.ProjectNo, (INT08U*)HANKOOK_TIRE_TP2, 6) == 0)
+				{
+					if ((m_ExtSEnv.mDevice.ProjectID.Group_ID == HANKOOK_TIRE_TP2_PCR_GT_LOT4))
+					{
+						if (m_WorkData[s_WorkInx].Not_Check_Goods)
+						{
+							//GT RACK 감지 여부 확인
+							if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 1)  // Left
+							{
+								if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))
+								{
+									nFlag = 3;
+								}
+							}
+							else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 2)
+							{
+								if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))
+								{
+									nFlag = 4;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (nFlag == 0)
+			{
+				if (s_Work_Fork_Flag &amp; cbits[0])
+				{
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_FROM);
+
+					s_Fork_TargetPos[0] = m_WorkData[s_WorkInx].ForkDepth[i];
+
+					if (m_WorkData[s_WorkInx].IsStation)
+					{
+						INT08U nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+						if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FER_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FEL_NO_LOAD;
+							}
+						}
+						else if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_2POS)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FHR_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FHL_NO_LOAD;
+							}
+						}
+						else if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_3POS)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FMR_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FML_NO_LOAD;
+							}
+						}
+					}
+					else
+					{
+						if (s_Fork_TargetPos[0] &gt; 0)
+						{
+							// 우측
+							if ((s_Fork_TargetPos[0] &gt;= m_ExtSEnv2.ForkDrive.ForkPosDepth.mFER) \
+								&amp;&amp; m_ExtSEnv2.ForkDrive.ForkPosDepth.mFER)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FER_NO_LOAD;
+							}
+							else if ((s_Fork_TargetPos[0] &gt;= m_ExtSEnv2.ForkDrive.ForkPosDepth.mFMR) \
+								&amp;&amp; m_ExtSEnv2.ForkDrive.ForkPosDepth.mFMR)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FMR_NO_LOAD;
+							}
+							else if ((s_Fork_TargetPos[0] &gt;= m_ExtSEnv2.ForkDrive.ForkPosDepth.mFHR) \
+								&amp;&amp; m_ExtSEnv2.ForkDrive.ForkPosDepth.mFHR)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FHR_NO_LOAD;
+							}
+						}</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_FORK_OUT"><summary><span class="mono">RUN_SEQ_LOADING_FORK_OUT</span> <span class="kind">dev_SRM.c:60741</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60699 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT;</code></li><li>L60791 from <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li><li>L60798 from <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li><li>L60864 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_LIFT_UP;</code></li><li>L60917 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP;</code></li><li>L62086 from <span class="mono">RUN_SEQ_STICKY_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_FORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_FORK_OUT:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code :
+			save_error_code(ERROR1_FORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= DEF_DELAY_FORK_OUT_GET)
+				{
+					if (m_ExtSEnv.Machine.mType.Fork_Sensor_Type &amp; cbits[0])
+					{
+						// 포크 속도 위치 프로파일 제어
+						Fork_Auto_Profile_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx]);
+					}
+					else
+					{
+						// 포크 위치 제어
+						Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx], m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag);
+					}
+
+					if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_COMPLETE)
+					{
+						// Complete Fork Out
+						//s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT);
+
+						m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+						m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_AFTER_FORK_OUT;
+					}
+					else if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_STOP_3)
+					{
+						m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+					}
+				}
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_AFTER_FORK_OUT"><summary><span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span> <span class="kind">dev_SRM.c:60787</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60776 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_AFTER_FORK_OUT;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT</span></p><pre class="code-sm">	case RUN_SEQ_LOADING_AFTER_FORK_OUT:
+		s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT_LIFT);
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;
+		/*
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT_LIFT);
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;
+		}
+		*/
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT"><summary><span class="mono">RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT</span> <span class="kind">dev_SRM.c:60803</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60791 from <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li><li>L60798 from <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li><li>L62086 from <span class="mono">RUN_SEQ_STICKY_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_LOADING_FORK_OUT_LIFT_UP</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_UP_FROM);</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);</code><br><code>save_error_code(ERROR1_INVERTOR_LIFT, 3, m_pgmEnv.SRM_RunMode);</code><br><code>save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Lift_MoveStart = m_St.Inv_St[INV_HOIST].Current_Pos;
+
+			/*
+			Set_TestStatus(DEBUG_STR_40, m_St.PosFork1.St_No);
+			Set_TestStatus(DEBUG_STR_41, m_St.PosFork1.Bay_No);
+			Set_TestStatus(DEBUG_STR_42, m_St.PosFork1.Level_No);
+			Set_TestStatus(DEBUG_STR_43, m_St.Inv_St[INV_HOIST].Current_Pos);
+			*/
+
+			//if (m_St.PosFork1.St_No)
+			if (m_WorkData[s_WorkInx].Station_No &gt; 0)
+			{
+				//nStationNo = m_St.PosFork1.St_No - 1;
+
+				nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+				//Set_TestStatus(DEBUG_STR_44, nStationNo);
+
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					+ m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset \
+					+ abs(m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset);
+			}
+			else
+			{
+
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					+ m_ExtSEnv2.LiftDrive.LevelUpOffset \
+					+ abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+			}
+
+			//Set_TestStatus(DEBUG_STR_45, s_Lift_MoveTarget);
+
+			nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_AUTO_FORKOUT);
+
+			if (nLift_Control_Error)
+			{
+				save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);
+				/*
+				if (nLift_Control_Error == M_CTR_ERROR_FALUT)
+				{
+					save_error_code(ERROR1_INVERTOR_LIFT, 3, m_pgmEnv.SRM_RunMode);
+				}
+				else
+				{
+					save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);
+				}
+				*/
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_UP_FROM);
+
+				s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_OUT_LIFT);
+
+				SetTimer1ms(&amp;s_Lift_Move_Timer);
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_LIFT_UP;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_FORK_OUT_LIFT_UP"><summary><span class="mono">RUN_SEQ_LOADING_FORK_OUT_LIFT_UP</span> <span class="kind">dev_SRM.c:60869</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60864 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_LIFT_UP;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_WORK_TIMEOUT, 4, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_FORK_OUT_LIFT_UP:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_WORK_TIMEOUT, 4, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else
+			{
+				if (check_inverter_In_position_reach(INV_HOIST, s_Lift_MoveTarget))
+				{
+					nFinish_flag |= cbits[1];
+					if (!s_Lift_MoveComplete)
+					{
+						s_Lift_MoveComplete = 1;
+
+						if (m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir == LIFT_MOVE_UP)
+						{
+							s_Lift_MoveDistance = m_St.Inv_St[INV_HOIST].Current_Pos - s_Lift_MoveStart;
+						}
+						else if (m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir == LIFT_MOVE_DOWN)
+						{
+							s_Lift_MoveDistance = s_Lift_MoveStart - m_St.Inv_St[INV_HOIST].Current_Pos;
+						}
+						else
+						{
+							s_Lift_MoveDistance = 0;
+						}
+
+						Update_Operation_Info_Distance(INV_HOIST, s_Lift_MoveDistance);
+						//Update_Operation_Info_Time(INV_HOIST, getCalcTimer1ms(s_Lift_Move_Timer));
+					}
+				}
+
+				if (nFinish_flag == 0x02)
+				{
+					s_Lift_MoveComplete = 0;
+
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT_LIFT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP"><summary><span class="mono">RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP</span> <span class="kind">dev_SRM.c:60923</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60917 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_LOADING_PRE_FORK_IN</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_IN_FROM);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_FORK_OUT_AFTER_LIFT_UP:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+			{
+				Motor_Brake_Enable(INV_HOIST);
+			}
+
+			if (s_Work_Fork_Flag &amp; cbits[0])
+			{
+				if (Check_ForkOut_After_MoveLift_ForkSensor(s_Fork_Oper_Mode))
+				{
+					// 승강 후, 포크센서 미감지 이상 발생.
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+				}
+				else
+				{
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_IN_FROM);
+
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_CENTER);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_IN;
+				}
+
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_PRE_FORK_IN"><summary><span class="mono">RUN_SEQ_LOADING_PRE_FORK_IN</span> <span class="kind">dev_SRM.c:60952</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60945 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_PRE_FORK_IN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LOADING_FORK_IN</span></p><pre class="code-sm">	case RUN_SEQ_LOADING_PRE_FORK_IN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_CENTER);
+
+			s_Fork_TargetPos[0] = 0;
+
+			if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FEL_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FEL_TO_CENTER_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FML_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FML_TO_CENTER_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHL_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FHL_TO_CENTER_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FER_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FER_TO_CENTER_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FMR_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FMR_TO_CENTER_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHR_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FHR_TO_CENTER_LOAD;
+			}
+
+			m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_IN;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_FORK_IN"><summary><span class="mono">RUN_SEQ_LOADING_FORK_IN</span> <span class="kind">dev_SRM.c:60991</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60987 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_IN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_LOADING_AFTER_FORK_IN</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_FORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_FORK_IN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_FORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				if (m_ExtSEnv.Machine.mType.Fork_Sensor_Type &amp; cbits[0])
+				{
+					// 포크 속도 위치 프로파일 제어
+					Fork_Auto_Profile_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx]);
+				}
+				else
+				{
+					// 포크 위치 제어
+					//Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_ForkTragetPos[0]);
+					Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx], m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag);
+				}
+
+				if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_COMPLETE)
+				{
+					m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+					//s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_CENTER);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_AFTER_FORK_IN;
+				}
+				else if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_STOP_3)
+				{
+					m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_AFTER_FORK_IN"><summary><span class="mono">RUN_SEQ_LOADING_AFTER_FORK_IN</span> <span class="kind">dev_SRM.c:61036</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61025 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_AFTER_FORK_IN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LOADING_COMPLETE</span></p><pre class="code-sm">	case RUN_SEQ_LOADING_AFTER_FORK_IN:
+		if (1/*getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time*/)
+		{
+			// 파라미터 수정 후 코딩
+			//s_Delay_Time = DEF_TIMEOUT_CHK_GOX;
+
+			if (m_WorkData[s_WorkInx].Not_Check_Goods)
+			{
+				s_Over_Time = 600000;
+			}
+			else
+			{
+				s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_DETECT_GOODS);
+			}
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_COMPLETE;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LOADING_COMPLETE"><summary><span class="mono">RUN_SEQ_LOADING_COMPLETE</span> <span class="kind">dev_SRM.c:61056</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61052 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_COMPLETE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMPTY_GOODS, 4, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_LOADING_COMPLETE:
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				if (m_WorkData[s_WorkInx].IsStation)
+				{
+					// 스테이션 로딩 작업후
+					if (s_Work_Fork_Flag &amp; cbits[0])
+					{
+						save_error_code(ERROR1_EMPTY_GOODS, 4, m_pgmEnv.SRM_RunMode);
+					}
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+					break;</pre></details><h3 id="grp-unloading">3. 이재 PUT</h3><details class="case-item" id="case_RUN_SEQ_UNLOADING_START"><summary><span class="mono">RUN_SEQ_UNLOADING_START</span> <span class="kind">dev_SRM.c:61144</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L60452 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_START;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_UNLOADING_INTERLOCK_NO_USE</span>, <span class="mono">RUN_SEQ_UNLOADING_INTERLOCK</span></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_START: // Fork UnSotre Before Delay
+		if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+		{
+			Motor_Brake_Enable(INV_HOIST);
+		}
+		else
+		{
+			if (Get_Motor_Brake_Release(INV_HOIST))
+			{
+				Motor_Brake_Release(INV_HOIST);
+			}
+		}
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		if (m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag)
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_INTERLOCK_NO_USE;
+		}
+		else
+		{
+			s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_WAIT_INTERLOCK);
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_INTERLOCK;
+		}
+
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_INTERLOCK"><summary><span class="mono">RUN_SEQ_UNLOADING_INTERLOCK</span> <span class="kind">dev_SRM.c:61171</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61160 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_INTERLOCK_NO_USE;</code></li><li>L61166 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_INTERLOCK;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_STATION_INTERLOCK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_INTERLOCK:
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				save_error_code(ERROR1_STATION_INTERLOCK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_INTERLOCK_NO_USE"><summary><span class="mono">RUN_SEQ_UNLOADING_INTERLOCK_NO_USE</span> <span class="kind">dev_SRM.c:61215</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61160 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_INTERLOCK_NO_USE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_UNLOADING_PRE_FORK_OUT</span></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_INTERLOCK_NO_USE:
+		s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT);
+
+		s_Pre_DST_State = 0;
+		s_Cur_DST_State = 0;
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_PRE_FORK_OUT;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_PRE_FORK_OUT"><summary><span class="mono">RUN_SEQ_UNLOADING_PRE_FORK_OUT</span> <span class="kind">dev_SRM.c:61225</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61189 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_PRE_FORK_OUT;</code></li><li>L61202 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_PRE_FORK_OUT;</code></li><li>L61211 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_PRE_FORK_OUT;</code></li><li>L61222 from <span class="mono">RUN_SEQ_UNLOADING_INTERLOCK_NO_USE</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_PRE_FORK_OUT;</code></li></ul><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_TO);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_PRE_FORK_OUT: // 이재
+		// 이중입고 센서 확인
+		INT08U nDstState = 0;
+
+		if (s_Work_Fork_Flag &amp; cbits[0])
+		{
+			if (m_WorkData[s_WorkInx].IsStation)
+			{
+				nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+				if ((m_ExtSEnv1.StationEnv.StationSet[nStationNo].Type == STATION_OUT_TYPE)
+					|| (m_ExtSEnv1.StationEnv.StationSet[nStationNo].Type == STATION_IN_OUT_TYPE))
+				{
+					// 출고스테이션 이재 작업중 이중입고 확인
+					//if (m_ExtSEnv2.CtrParam.Station_DSTLR_Fault_Flag)
+					if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].Station_DSTLR_Fault_Flag)
+					{
+						// 스테이션 이중입고 장애 발생 설정 ON이면
+						if (m_WorkData[s_WorkInx].ForkDepth[POS_FORK_1] &lt; 0)  // Left
+						{
+							if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nDstState = 3;
+						}
+						else
+						{
+							if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nDstState = 4;
+						}
+					}
+				}
+			}
+			else
+			{
+				// 랙 위치에서 이중입고 발생
+				if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+				{
+					if (m_WorkData[s_WorkInx].ForkDepth[POS_FORK_1] &lt; 0)  // Left
+					{
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nDstState = 1;
+					}
+					else
+					{
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nDstState = 2;
+					}
+				}
+				else
+				{
+					if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 1)
+					{
+						// 좌측 더블딥 위치
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nDstState = 1;
+
+						if (nDstState == 0)
+						{
+							if (Check_DSTxR_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nDstState = 5;
+						}
+					}
+					else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 2)
+					{
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nDstState = 1;
+					}
+					else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 3)
+					{
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nDstState = 2;
+					}
+					else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 4)
+					{
+						if (Check_DSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nDstState = 2;
+
+						if (nDstState == 0)
+						{
+							if (Check_DSTxR_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nDstState = 6;
+						}
+					}
+				}
+			}
+		}
+
+		if (s_Pre_DST_State != nDstState)
+		{
+			s_Pre_DST_State = nDstState;
+			s_DST_Chanttering_Time = m_pgmEnv.timer1ms;
+		}
+		else
+		{
+			if (getCalcTimer1ms(s_DST_Chanttering_Time) &gt; 50)
+			{
+				s_Cur_DST_State = s_Pre_DST_State;
+			}
+		}
+
+		/*
+		m_TestStatus.Ctrl[DEBUG_CTR_2] = s_WorkInx;
+		m_TestStatus.Ctrl[DEBUG_CTR_3] = s_Work_Fork_Flag;
+		m_TestStatus.Ctrl[DEBUG_CTR_4] = m_WorkData[s_WorkInx].IsStation;
+		m_TestStatus.Ctrl[DEBUG_CTR_5] = m_WorkData[s_WorkInx].Station_No;
+		m_TestStatus.Ctrl[DEBUG_STR_6] = m_WorkData[s_WorkInx].ForkDepth[FEEDING_1];
+		m_TestStatus.Ctrl[DEBUG_CTR_7] = m_WorkData[s_WorkInx].TargetPos.Row_ID;
+		m_TestStatus.Ctrl[DEBUG_CTR_8] = nDstState;
+		m_TestStatus.Ctrl[DEBUG_CTR_9] = s_Cur_DST_State;
+
+		//m_TestStatus.St[DEBUG_STR_21] = m_WorkData[s_WorkInx].ForkDepth;
+		*/
+
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (s_Cur_DST_State == 0)
+			{
+				if (s_Work_Fork_Flag &amp; cbits[0])
+				{
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_OUT_TO);
+
+					s_Fork_TargetPos[0] = m_WorkData[s_WorkInx].ForkDepth[POS_FORK_1];
+					m_SRM_Sub_RunStep_0 = 0;
+				}
+
+				if (m_WorkData[s_WorkInx].IsStation)
+				{
+					INT08U nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+					if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+					{</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_FORK_OUT"><summary><span class="mono">RUN_SEQ_UNLOADING_FORK_OUT</span> <span class="kind">dev_SRM.c:61516</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61422 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT;</code></li><li>L61569 from <span class="mono">RUN_SEQ_UNLOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT;</code></li><li>L61634 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN;</code></li><li>L61665 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_FORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_FORK_OUT:
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				/////////////////////////////////////////////////////
+				// Error Code : 
+				save_error_code(ERROR1_FORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_AFTER_FORK_OUT"><summary><span class="mono">RUN_SEQ_UNLOADING_AFTER_FORK_OUT</span> <span class="kind">dev_SRM.c:61565</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61555 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_AFTER_FORK_OUT;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT</span>, <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_AFTER_FORK_OUT:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+
+			/*
+			if (m_WorkData[s_WorkInx].Not_Check_Goods)
+			{
+				NOP;
+			}
+			else
+			{
+				if (Check_SRM_Error_State())
+				{
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				}
+			}
+			*/
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT"><summary><span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT</span> <span class="kind">dev_SRM.c:61594</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61569 from <span class="mono">RUN_SEQ_UNLOADING_AFTER_FORK_OUT</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_DOWN_TO);</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);</code><br><code>//save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_FORK_OUT_PRE_LIFT:
+		/*
+		s_Lift_MoveTarget = m_St.Inv_St[INV_LIFT].Current_Pos \
+			- m_ExtSEnv2.LiftDrive.LevelUpOffset \
+			- abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+		*/
+
+		INT08U nStationNo = 0;
+		if (m_St.PosFork1.St_No &gt; 0)
+		{
+			nStationNo = m_St.PosFork1.St_No - 1;
+
+			s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+				- m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset \
+				- abs(m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset);
+		}
+		else
+		{
+			s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+				- m_ExtSEnv2.LiftDrive.LevelUpOffset \
+				- abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+		}
+
+		//m_TestStatus.Ctrl[DEBUG_CTR_4] = m_St.Inv_St[INV_LIFT].Current_Pos;
+		//m_TestStatus.Ctrl[DEBUG_CTR_5] = s_Lift_MoveTarget;
+
+		nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_AUTO_FORKOUT);
+
+		if (nLift_Control_Error)
+		{
+			save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);
+			//save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_DOWN_TO);
+
+			s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_OUT_LIFT);
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN"><summary><span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN</span> <span class="kind">dev_SRM.c:61638</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61634 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_WORK_TIMEOUT, 5, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_FORK_OUT_LIFT_DOWN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_WORK_TIMEOUT, 5, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else
+			{
+				nFinish_flag = 0;
+				if (check_inverter_In_position_reach(INV_HOIST, s_Lift_MoveTarget))
+				{
+					nFinish_flag |= cbits[1];
+				}
+
+				if (nFinish_flag == 0x02)
+				{
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT_LIFT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN"><summary><span class="mono">RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN</span> <span class="kind">dev_SRM.c:61671</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61665 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_UNLOADING_FORK_IN</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_IN_TO);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_FORK_OUT_AFTER_LIFT_DOWN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+			{
+				Motor_Brake_Enable(INV_HOIST);
+			}
+
+			if (s_Work_Fork_Flag &amp; cbits[0])
+			{
+				if (Check_ForkOut_After_MoveLift_ForkSensor(s_Fork_Oper_Mode))
+				{
+					// 승강 후, 포크센서 미감지 이상 발생.
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+				}
+				else
+				{
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_FORK_IN_TO);
+
+					s_Fork_TargetPos[0] = 0;
+
+					if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FEL_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FEL_TO_CENTER_NO_LOAD;
+					}
+					else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FML_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FML_TO_CENTER_NO_LOAD;
+					}
+					else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHL_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FHL_TO_CENTER_NO_LOAD;
+					}
+					else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FER_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FER_TO_CENTER_NO_LOAD;
+					}
+					else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FMR_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FMR_TO_CENTER_NO_LOAD;
+					}
+					else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHR_LOAD)
+					{
+						s_Fork_Oper_Mode = FORK_MOVE_FHR_TO_CENTER_NO_LOAD;
+					}
+
+					m_SRM_Sub_RunStep_0 = 0;
+
+					s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_CENTER);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_IN;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_FORK_IN"><summary><span class="mono">RUN_SEQ_UNLOADING_FORK_IN</span> <span class="kind">dev_SRM.c:61728</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61722 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_FORK_IN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_FORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_FORK_IN:
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				/////////////////////////////////////////////////////
+				// Error Code : 
+				save_error_code(ERROR1_FORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_AFTER_FORK_IN"><summary><span class="mono">RUN_SEQ_UNLOADING_AFTER_FORK_IN</span> <span class="kind">dev_SRM.c:61774</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61764 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_AFTER_FORK_IN;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_UNLOADING_COMPLETE</span></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_AFTER_FORK_IN:
+		if (1/*getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time*/)
+		{
+			s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_DETECT_GOODS);
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_COMPLETE;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_UNLOADING_COMPLETE"><summary><span class="mono">RUN_SEQ_UNLOADING_COMPLETE</span> <span class="kind">dev_SRM.c:61784</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L61780 from <span class="mono">RUN_SEQ_UNLOADING_AFTER_FORK_IN</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_UNLOADING_COMPLETE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>save_error_code</b>: <code>//save_error_code(ERROR_CARRIER_GOODS_SENSOR, 3, nFlag);</code><br><code>save_error_code(ERROR1_LOADED_GOODS, 1, nFlag);</code></p><pre class="code-sm">	case RUN_SEQ_UNLOADING_COMPLETE:
+		nFlag = 0;
+
+		if (m_WorkData[s_WorkInx].Not_Check_Goods)
+		{
+			asm volatile("NOP");
+		}
+		else
+		{
+			if ((s_Work_Fork_Flag &amp; cbits[0]) &amp;&amp; (Is_Exist_Goods(POS_FORK_1)))  nFlag = 1;
+		}
+
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				/////////////////////////////////////////////////////
+				// Error Code :
+				//save_error_code(ERROR_CARRIER_GOODS_SENSOR, 3, nFlag);
+				save_error_code(ERROR1_LOADED_GOODS, 1, nFlag);
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				break;</pre></details><h3 id="grp-complete">4. 완료·PLC</h3><details class="case-item" id="case_RUN_SEQ_COMPLETE"><summary><span class="mono">RUN_SEQ_COMPLETE</span> <span class="kind">dev_SRM.c:62538</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L59535 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L59543 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L60470 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L61140 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L61845 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L61851 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L62533 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li><li>L63269 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_STAND_BY</span>, <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_PREPARE_MOVE_0</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);</code><br><code>save_error_code(ERROR1_TRAVEL_SENSOR, 0, 0);</code><br><code>save_error_code(ERROR1_LIFT_SENSOR, 0, 0);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 2);</code></p><pre class="code-sm">	case RUN_SEQ_COMPLETE:
+		//s_TravMaxSpeed = 0;
+		//s_LiftMaxSpeed = 0;
+
+		if (m_pgmEnv.SRM_TaskMode)
+		{
+			m_St.TaskWork[s_WorkInx].OrderState = TASK_STATUS_COMPLETE;
+
+			if (++s_WorkInx &gt;= m_WorkCnt)
+			{
+				m_pgmEnv.SRM_TaskMode = 0;
+				m_pgmEnv.SRM_TaskIndex = 0;
+
+				m_St.Task_Operation = 0;
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+			}
+			else
+			{
+				if (m_pgmEnv.Start_Off_Flag)
+				{
+					/*
+#if DEBUG_CYCLE_STOP
+					save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);
+#else
+					if (m_ExtSEnv2.CtrParam.StartOff_AlarmFlag == 1)
+					{
+						save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);
+					}
+#endif
+					*/
+
+					//m_pgmEnv.Start_Off_Flag = 0;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				}
+				else
+				{
+					m_St.TaskWork[s_WorkInx].OrderState = TASK_STATUS_DOING;
+					m_pgmEnv.SRM_TaskIndex = s_WorkInx;
+
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_0;
+				}
+			}
+		}
+		else
+		{
+			if (++s_WorkInx &gt;= m_WorkCnt)
+			{
+				if (m_pgmEnv.Move_Maintanence_Flag)
+				{
+					m_pgmEnv.Move_Maintanence_Flag = 0;
+				}
+
+				if (s_CheckHomeSensor)
+				{
+					s_CheckHomeSensor = 0;
+
+					m_pgmEnv.Check_Home_Flag = 1;
+					m_pgmEnv.Move_Home_Flag = 0;
+
+					// 2024. 9. 12 현장 : KCTC 이평리
+					// 홈복귀 수행 완료후, 시작상태 OFF 처리
+					if (m_St.SRM_Status1.Bit.StartOn)
+					{
+						m_St.SRM_Status1.Bit.StartOn = 0;
+					}
+
+					// 24. 10. 16 - 홈위치를 스테이션 위치로 변경하면서 홈도그 확인 기능 삭제.
+					// 홈위치에서 항시 홈도그 감지 여부 확인 후, 원복
+					/*
+					// 홈 위치 이동후 도착 위치가 원점설정 위치일 경우, 센서 확인.
+					if (m_ExtSEnv2.TravDrive.Origin_Position)
+					{
+						if ((m_St.Inv_St[INV_TRAV].Current_Pos &gt;= \
+							(m_ExtSEnv2.TravDrive.Origin_Position - m_ExtSEnv2.TravDrive.InPos_Hysteresis)) &amp;&amp;
+							(m_St.Inv_St[INV_TRAV].Current_Pos &lt;= \
+								(m_ExtSEnv2.TravDrive.Origin_Position + m_ExtSEnv2.TravDrive.InPos_Hysteresis)))
+						{
+							if (!Get_DI_State(IN_THP))
+							{
+								m_pgmEnv.Check_Home_Flag = 0;
+								save_error_code(ERROR1_TRAVEL_SENSOR, 0, 0);
+							}
+						}
+					}
+
+					if (m_ExtSEnv2.LiftDrive.Origin_Pos)
+					{
+						if ((m_St.Inv_St[INV_LIFT].Current_Pos &gt;= \
+							(m_ExtSEnv2.LiftDrive.Origin_Pos - m_ExtSEnv2.LiftDrive.InPos_Hysteresis)) &amp;&amp;
+							(m_St.Inv_St[INV_LIFT].Current_Pos &lt;= \
+								(m_ExtSEnv2.LiftDrive.Origin_Pos + m_ExtSEnv2.LiftDrive.InPos_Hysteresis)))
+						{
+							if (!Get_DI_State(IN_LHP))
+							{
+								m_pgmEnv.Check_Home_Flag = 0;
+								save_error_code(ERROR1_LIFT_SENSOR, 0, 0);
+							}
+						}
+					}
+					*/
+				}
+
+				if (m_pgmEnv.NormalStopFlag)
+				{
+					save_error_code(ERROR1_EMBERGENCY_STOP, 3, 2);
+				}
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+
+				//m_TestStatus.St[DEBUG_STR_4] = getCalcTimer1ms(s_TaskTimer) / 10;		//0.01 초 단위
+			}
+			else
+			{
+				if (m_pgmEnv.Start_Off_Flag)
+				{
+					//m_pgmEnv.Start_Off_Flag = 0;
+
+					/*
+#if DEBUG_CYCLE_STOP</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_PLC_COM_0</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_PLC_COM_1</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_PLC_COM_2</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_PLC_COM_3</summary><p>case 본문 없음 (enum만)</p></details><h3 id="grp-error">5. 에러 정지</h3><details class="case-item" id="case_RUN_SEQ_ERROR_FORK_STOP"><summary><span class="mono">RUN_SEQ_ERROR_FORK_STOP</span> <span class="kind">dev_SRM.c:62682</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L58738 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L58755 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L58801 from <span class="mono">RUN_SEQ_START</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L58923 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L60431 from <span class="mono">RUN_SEQ_FORK_START</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L60437 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L60510 from <span class="mono">RUN_SEQ_LOADING_INTERLOCK</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li><li>L60736 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_STAND_BY</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderStatus(0, WORK_STATUS_FAIL);  // 3: 실패완료</code><br><code>Save_ForkMove_OrderStatus(0, WORK_STATUS_FAIL);  // 3: 실패완료</code></p><pre class="code-sm">	case RUN_SEQ_ERROR_FORK_STOP: // 작업실패중단
+		m_pgmEnv.NormalStopFlag = 0;
+		m_pgmEnv.EmergencyStopFlag = 0;
+		m_pgmEnv.Fork_EmergencyStop = 0;
+
+		m_SRM_Sub_RunStep_0 = 0;
+		m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+
+		ForkProfile.control = 0;
+
+		s_CheckHomeSensor = 0;
+		m_pgmEnv.Move_Home_Flag = 0;
+		m_pgmEnv.Move_Maintanence_Flag = 0;
+
+		if (m_St.SRM_Status1.Bit.Fault)
+		{
+			if (m_St.SRM_Mode.Bit.Auto)
+			{
+				Change_DeviceMode(DEVICE_MANUAL_MODE, 1);
+			}
+		}
+
+		if (m_pgmEnv.Start_Off_Flag)
+		{
+			m_pgmEnv.Start_Off_Flag = 0;
+		}
+
+		Motor_Application_Stop(INV_TRAVEL, TRAV_VEL_AUTO_H);
+		Motor_Application_Stop(INV_HOIST, LIFT_VEL_AUTO_H);
+		Motor_Application_Stop(INV_FORK_1, FORK_VEL_AUTO_H);
+
+		if (m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag)
+		{
+			asm volatile("NOP");
+		}
+		else
+		{
+			if (m_WorkData[s_WorkInx].IsStation &amp;&amp; m_ExtSEnv1.StationEnv.InterLock_Type)
+			{
+				m_pgmEnv.Station_Error_No = m_WorkData[s_WorkInx].Station_No;
+				//Station_Interlock_Control(m_WorkData[s_WorkInx].Station_No, 0);
+			}
+		}
+
+
+		if (m_St.ForkWork[0].OrderStatus_Fork == WORK_STATUS_DOING)
+			Save_ForkWork_OrderStatus(0, WORK_STATUS_FAIL);  // 3: 실패완료
+
+		if (m_St.ForkWork[0].OrderStatus_Move == WORK_STATUS_DOING)
+			Save_ForkMove_OrderStatus(0, WORK_STATUS_FAIL);  // 3: 실패완료
+
+		if (m_pgmEnv.SRM_TaskMode)
+		{
+			m_pgmEnv.SRM_TaskMode = 0;
+			m_St.Task_Operation = 0;
+			m_St.TaskWork[s_WorkInx].OrderState = TASK_STATUS_FAIL;
+
+			m_pgmEnv.SRM_TaskIndex = s_WorkInx;
+		}
+
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_ERROR_TRAV_LIFF_STOP"><summary><span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span> <span class="kind">dev_SRM.c:62746</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L49354 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li><li>L58612 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP; // 91번 에러상태로 빠진다.</code></li><li>L58887 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP; //주행승강정지 빝트를 에러 변수에 보낸다</code></li><li>L58940 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li><li>L59080 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li><li>L59201 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li><li>L59212 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li><li>L59244 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_1</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMBERGENCY_STOP, 2, 1);</code></p><pre class="code-sm">	case RUN_SEQ_ERROR_TRAV_LIFF_STOP: 	// 주행,승강 동작중 작업실패중단
+		if (m_pgmEnv.EmergencyStopFlag)
+		{
+			save_error_code(ERROR1_EMBERGENCY_STOP, 2, 1);
+		}
+		m_SRM_Sub_RunStep_0 = 0;
+
+		ForkProfile.control = 0;
+
+		Auto_Ctr_Travel(m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos, TRAV_VEL_EMG);
+		Auto_Ctr_Lift(m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos, LIFT_VEL_EMG);
+
+		Motor_Application_Stop(INV_FORK_1, FORK_VEL_AUTO_H);
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_1;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_ERROR_TRAV_LIFT_STOP_1"><summary><span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_1</span> <span class="kind">dev_SRM.c:62764</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62761 from <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_3</span>, <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_2</span></p><pre class="code-sm">	case RUN_SEQ_ERROR_TRAV_LIFT_STOP_1:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 30000)
+		{
+			Motor_Application_Stop(INV_TRAVEL, TRAV_VEL_AUTO_H);
+			Motor_Application_Stop(INV_HOIST, LIFT_VEL_AUTO_H);
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;
+		}
+		else
+		{
+			nFlag = 0;
+			if (m_St.Inv_St[INV_TRAVEL].Current_Vel != 0)
+			{
+				nFlag |= cbits[0];
+			}
+
+			if (m_St.Inv_St[INV_HOIST].Current_Vel != 0)
+			{
+				nFlag |= cbits[1];
+			}
+
+			if (nFlag == 0)
+			{
+				Motor_Application_Stop(INV_TRAVEL, TRAV_VEL_AUTO_H);
+				Motor_Application_Stop(INV_HOIST, LIFT_VEL_AUTO_H);
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_2;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_ERROR_TRAV_LIFT_STOP_2"><summary><span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_2</span> <span class="kind">dev_SRM.c:62797</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62792 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_2;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_3</span></p><pre class="code-sm">	case RUN_SEQ_ERROR_TRAV_LIFT_STOP_2:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 5000)
+		{
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;
+		}
+		else
+		{
+			// 주행, 승강 모터 정지 후, 브레이크 확인
+			nFlag = 0;
+			if (m_St.Inv_St[INV_TRAVEL].Status1.MoveFlag)
+			{
+				nFlag |= cbits[0];
+			}
+
+			if (m_St.Inv_St[INV_HOIST].Status1.MoveFlag)
+			{
+				nFlag |= cbits[1];
+			}
+
+			//if (m_SRM_TxPDO[INV_TRAVEL].StatusWord.B.ReleaseBrake)
+			if (Get_Motor_Brake_Release(INV_TRAVEL))
+			{
+				nFlag |= cbits[2];
+			}
+
+			//if (m_SRM_TxPDO[INV_HOIST].StatusWord.B.ReleaseBrake)
+			if (Get_Motor_Brake_Release(INV_HOIST))
+			{
+				nFlag |= cbits[3];
+			}
+
+			if (nFlag == 0)
+			{
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;
+			}
+		}
+
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_ERROR_TRAV_LIFT_STOP_3"><summary><span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_3</span> <span class="kind">dev_SRM.c:62838</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62771 from <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_1</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;</code></li><li>L62801 from <span class="mono">RUN_SEQ_ERROR_TRAV_LIFT_STOP_2</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;</code></li><li>L62832 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFT_STOP_3;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_STAND_BY</span></p><p><b>Save_*</b>: <code>Save_ForkWork_OrderStatus(0, WORK_STATUS_FAIL);  // 5:실패완료</code><br><code>Save_ForkMove_OrderStatus(0, WORK_STATUS_FAIL);  // 5:실패완료</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 5);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 5);</code><br><code>save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);</code></p><pre class="code-sm">	case RUN_SEQ_ERROR_TRAV_LIFT_STOP_3:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 100)
+		{
+			if (m_pgmEnv.Start_Off_Flag)
+			{
+				m_pgmEnv.Start_Off_Flag = 0;
+
+				/*
+#if DEBUG_CYCLE_STOP
+				save_error_code(ERROR1_EMBERGENCY_STOP, 3, 5);
+#else
+				if (m_ExtSEnv2.CtrParam.StartOff_AlarmFlag == 1)
+				{
+					save_error_code(ERROR1_EMBERGENCY_STOP, 3, 5);
+				}
+#endif
+				*/
+			}
+
+			if (m_pgmEnv.NormalStopFlag)
+			{
+				save_error_code(ERROR1_EMBERGENCY_STOP, 3, 4);
+			}
+
+			if (m_St.SRM_Status1.Bit.Fault)
+			{
+				if (m_St.SRM_Mode.Bit.Auto)
+				{
+					Change_DeviceMode(DEVICE_MANUAL_MODE, 1);
+				}
+			}
+
+			s_CheckHomeSensor = 0;
+			m_pgmEnv.Move_Home_Flag = 0;
+			m_pgmEnv.Move_Maintanence_Flag = 0;
+
+			m_pgmEnv.Fork_EmergencyStop = 0;
+
+			if (m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag)
+			{
+				asm volatile("NOP");
+			}
+			else
+			{
+				if (m_WorkData[s_WorkInx].IsStation &amp;&amp; m_ExtSEnv1.StationEnv.InterLock_Type)
+				{
+					m_pgmEnv.Station_Error_No = 1;
+					//Station_Interlock_Control(m_WorkData[s_WorkInx].Station_No, 0);
+				}
+			}
+
+			if (m_St.ForkWork[0].OrderStatus_Fork == WORK_STATUS_DOING)
+				Save_ForkWork_OrderStatus(0, WORK_STATUS_FAIL);  // 5:실패완료
+
+			if (m_St.ForkWork[0].OrderStatus_Move == WORK_STATUS_DOING)
+				Save_ForkMove_OrderStatus(0, WORK_STATUS_FAIL);  // 5:실패완료
+
+			if (m_pgmEnv.SRM_TaskMode)
+			{
+				m_pgmEnv.SRM_TaskMode = 0;
+				m_St.Task_Operation = 0;
+				m_St.TaskWork[s_WorkInx].OrderState = TASK_STATUS_FAIL;
+
+				m_pgmEnv.SRM_TaskIndex = s_WorkInx;
+			}
+
+			m_pgmEnv.NormalStopFlag = 0;
+			m_pgmEnv.EmergencyStopFlag = 0;
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		break;</pre></details><h3 id="grp-origin">6. 원점·설정</h3><details class="case-item" id="case_RUN_SEQ_FORK_ORIGIN_0"><summary><span class="mono">RUN_SEQ_FORK_ORIGIN_0</span> <span class="kind">dev_SRM.c:63236</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L5138 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_ORIGIN_0;</code></li><li>L61841 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_ORIGIN_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_FORK_ORIGIN_1</span></p><pre class="code-sm">	case RUN_SEQ_FORK_ORIGIN_0:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) \
+			&gt;= (m_ExtSEnv2.CtrParam.Fork_Origin_DelayTime * 10))
+		{
+			if (!m_pgmEnv.Fork_Orgin_Operate_Auto)
+			{
+				m_pgmEnv.Home_Lamp_Flag = 1;
+			}
+
+			m_SRM_Sub_RunStep_0 = 1;
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_ORIGIN_1;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_FORK_ORIGIN_1"><summary><span class="mono">RUN_SEQ_FORK_ORIGIN_1</span> <span class="kind">dev_SRM.c:63251</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L63247 from <span class="mono">RUN_SEQ_FORK_ORIGIN_0</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_ORIGIN_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_COMPLETE</span>, <span class="mono">RUN_SEQ_STAND_BY</span></p><pre class="code-sm">	case RUN_SEQ_FORK_ORIGIN_1:
+		SRM_Fork_Reference_Process();
+
+		if ((m_SRM_Sub_RunStep_0 == 40) || (m_SRM_Sub_RunStep_0 == 102))
+		{
+			if (m_pgmEnv.Fork_Orgin_Operate_Auto)
+			{
+				if (m_SRM_Sub_RunStep_0 == 102)
+				{
+					// 원점 설정 실패
+					//Set_TestStatus(DEBUG_STR_63, m_St.Inv_St[INV_FORK_1].Current_Pos);
+				}
+				else
+				{
+					//Set_TestStatus(DEBUG_STR_62, m_St.Inv_St[INV_FORK_1].Current_Pos);
+				}
+
+				m_pgmEnv.Fork_Orgin_Operate_Auto = 0;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_COMPLETE;
+			}
+			else
+			{
+				m_pgmEnv.Home_Lamp_Flag = 0;
+				m_SRM_Sub_RunStep_0 = 0;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_TRAV_ORIGIN_0"><summary><span class="mono">RUN_SEQ_TRAV_ORIGIN_0</span> <span class="kind">dev_SRM.c:63280</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L5142 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_ORIGIN_0;</code></li><li>L8058 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_ORIGIN_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_TRAV_ORIGIN_1</span></p><pre class="code-sm">	case RUN_SEQ_TRAV_ORIGIN_0:
+		m_SRM_Sub_RunStep_0 = 1;
+		m_pgmEnv.Home_Lamp_Flag = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_ORIGIN_1;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_TRAV_ORIGIN_1"><summary><span class="mono">RUN_SEQ_TRAV_ORIGIN_1</span> <span class="kind">dev_SRM.c:63287</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L63284 from <span class="mono">RUN_SEQ_TRAV_ORIGIN_0</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_ORIGIN_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_STAND_BY</span></p><pre class="code-sm">	case RUN_SEQ_TRAV_ORIGIN_1:
+		SRM_Travel_Reference_Process();
+
+		if ((m_SRM_Sub_RunStep_0 == 50) || (m_SRM_Sub_RunStep_0 &gt;= 102))
+		{
+			m_pgmEnv.Home_Lamp_Flag = 0;
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LIFT_ORIGIN_0"><summary><span class="mono">RUN_SEQ_LIFT_ORIGIN_0</span> <span class="kind">dev_SRM.c:63298</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L5146 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_ORIGIN_0;</code></li><li>L8407 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_ORIGIN_0;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_LIFT_ORIGIN_1</span></p><pre class="code-sm">	case RUN_SEQ_LIFT_ORIGIN_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.Home_Lamp_Flag = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_ORIGIN_1;
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_LIFT_ORIGIN_1"><summary><span class="mono">RUN_SEQ_LIFT_ORIGIN_1</span> <span class="kind">dev_SRM.c:63306</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L63303 from <span class="mono">RUN_SEQ_LIFT_ORIGIN_0</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_ORIGIN_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_STAND_BY</span></p><pre class="code-sm">	case RUN_SEQ_LIFT_ORIGIN_1:
+		SRM_Lift_Reference_Process();
+
+		if ((m_SRM_Sub_RunStep_0 == 50) || (m_SRM_Sub_RunStep_0 == 102))
+		{
+			m_pgmEnv.Home_Lamp_Flag = 0;
+
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SET_HORIZONTAL_0</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SET_HORIZONTAL_1</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_SET_AUTO_RACK_0</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_SET_AUTO_RACK_1</summary><p>case 본문 없음 (enum만)</p></details><details class="case-item"><summary class="mono">RUN_SEQ_SET_AUTO_RACK_STOP</summary><p>case 본문 없음 (enum만)</p></details><h3 id="grp-home">7. 홈복귀</h3><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_0"><summary><span class="mono">RUN_SEQ_RETURN_HOME_0</span> <span class="kind">dev_SRM.c:62911</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L58916 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0; //RunMode를 이재 준비/이동이 아니라 홈복귀 0단계로 변경</code></li><li>L61082 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0;</code></li><li>L62487 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0;</code></li><li>L62933 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;</code></li><li>L62968 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_2;</code></li><li>L63015 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span>, <span class="mono">RUN_SEQ_RETURN_HOME_1</span>, <span class="mono">RUN_SEQ_RETURN_HOME_0_1</span></p><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_0:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 1000)
+		{
+			nFlag = Check_Fork_Center_Alarm();
+			if (nFlag)
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				//m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;
+				s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_PREFORE_MOVE);
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+
+#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE
+				Motor_Brake_Release(INV_TRAVEL);
+				Motor_Brake_Release(INV_HOIST);
+
+				s_Brake_Release_Retry = 0;
+
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;
+#else
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;
+#endif
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_0_1"><summary><span class="mono">RUN_SEQ_RETURN_HOME_0_1</span> <span class="kind">dev_SRM.c:62941</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62933 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;</code></li><li>L63015 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span>, <span class="mono">RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1</span>, <span class="mono">RUN_SEQ_RETURN_HOME_0_2</span>, <span class="mono">RUN_SEQ_RETURN_HOME_1</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag);</code></p><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_0_1:
+		// 주행, 승강 브레이크 해체 확인
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 3000)
+		{
+			++s_Brake_Release_Retry;
+			if (s_Brake_Release_Retry &gt; nDef_Error_Brake_Release_Retry)
+			{
+				s_Brake_Release_Retry = 0;
+
+				// 80-1 브레이크 해제 이상
+				save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else
+			{
+				if ((nFlag &amp; cbits[0]) == 0)
+				{
+					Motor_Brake_Enable(INV_TRAVEL);
+				}
+
+				if ((nFlag &amp; cbits[1]) == 0)
+				{
+					Motor_Brake_Enable(INV_HOIST);
+				}
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				//m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_2;
+			}
+		}
+		else
+		{
+			nFlag = 0;
+			if (Get_Motor_Brake_Release(INV_TRAVEL))
+			{
+				nFlag |= cbits[0];
+			}
+
+			if (Get_Motor_Brake_Release(INV_HOIST))
+			{
+				nFlag |= cbits[1];
+			}
+
+			//m_TestStatus.St[DEBUG_STR_8] = nFlag;
+			if (nFlag == 0x03)
+			{
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;
+			}
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_0_2"><summary><span class="mono">RUN_SEQ_RETURN_HOME_0_2</span> <span class="kind">dev_SRM.c:62993</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62968 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_2;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_RETURN_HOME_0_1</span></p><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_0_2:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; 1000)
+		{
+			if (Get_Motor_Brake_Release(INV_TRAVEL))
+			{
+				asm volatile("NOP");
+			}
+			else
+			{
+				Motor_Brake_Release(INV_TRAVEL);
+			}
+
+			if (Get_Motor_Brake_Release(INV_HOIST))
+			{
+				asm volatile("NOP");
+			}
+			else
+			{
+				Motor_Brake_Release(INV_HOIST);
+			}
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_0_1;
+		}
+		break;</pre></details><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_1"><summary><span class="mono">RUN_SEQ_RETURN_HOME_1</span> <span class="kind">dev_SRM.c:63019</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L62921 from <span class="mono">RUN_SEQ_RETURN_HOME_0</span>: <code>//m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;</code></li><li>L62935 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;</code></li><li>L62988 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_1;</code></li></ul><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_1:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= DEF_DELAY_BEFORE_MOVE)
+		{
+			s_WorkInx = 0;
+
+			if (m_ExtSEnv2.TravDrive.Home_Pos_StationNo &gt; 0)
+			{
+				nStationNo = m_ExtSEnv2.TravDrive.Home_Pos_StationNo - 1;
+
+				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos = m_ExtSEnv1.StationEnv.StationSet[nStationNo].InPosition.TravPos;
+
+				m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos = m_ExtSEnv1.StationEnv.StationSet[nStationNo].InPosition.LiftPos;
+				if (m_St.Inv_St[INV_FORK_1].Status1.GoodsFlag_Or_MoveHome)
+				{
+					m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset;
+				}
+				else
+				{
+					m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset;
+				}
+
+				m_St.TargetFork1.Bay_ID = 0;
+				m_St.TargetFork1.Level_ID = 0;
+				m_St.TargetFork1.Row_ID = 0;
+				m_St.TargetFork1.Station = m_ExtSEnv2.TravDrive.Home_Pos_StationNo;
+
+				if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+				}
+				else
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+				}
+
+				nChk_Home_Pos = 1;
+			}
+			else
+			{
+				// Home Bay 위치 확인
+				if (m_ExtSEnv2.TravDrive.Home_Pos_BayNo &gt; 0)
+				{
+					if (m_ExtSEnv2.TravDrive.Home_Pos_BayNo &lt; m_ExtSEnv0.RackConfig.BayCount)
+					{
+						nBayNo = m_ExtSEnv2.TravDrive.Home_Pos_BayNo - 1;
+
+						m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos = m_ExtSEnv0.CellConfig_Left.BayPos[nBayNo];
+						m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos = m_ExtSEnv0.CellConfig_Left.LvPos[0];			// Level-1
+						if (m_St.Inv_St[INV_FORK_1].Status1.GoodsFlag_Or_MoveHome)
+						{
+							m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv2.LiftDrive.LevelUpOffset;
+						}
+						else
+						{
+							m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv2.LiftDrive.LevelDnOffset;
+						}
+
+						m_St.TargetFork1.Bay_ID = m_ExtSEnv2.TravDrive.Home_Pos_BayNo;
+						m_St.TargetFork1.Level_ID = 1;
+						m_St.TargetFork1.Row_ID = 1;
+						m_St.TargetFork1.Station = 0;
+
+						m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+
+						nChk_Home_Pos = 1;
+					}
+					else
+					{
+						asm volatile("NOP");
+					}
+				}
+				else
+				{
+					asm volatile("NOP");
+				}
+			}
+
+			if (nChk_Home_Pos == 0)
+			{
+				// 홈위치 설정이 없는 경우 Station 1으로 이동 처리.
+				nStationNo = 1;
+
+				m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].TargetPos = m_ExtSEnv1.StationEnv.StationSet[nStationNo].InPosition.TravPos;
+
+				m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos = m_ExtSEnv1.StationEnv.StationSet[nStationNo].InPosition.LiftPos;
+				if (m_St.Inv_St[INV_FORK_1].Status1.GoodsFlag_Or_MoveHome)
+				{
+					m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset;
+				}
+				else
+				{
+					m_WorkData[s_WorkInx].DrvData[INV_HOIST].TargetPos += m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset;
+				}
+
+				m_St.TargetFork1.Bay_ID = 0;
+				m_St.TargetFork1.Level_ID = 0;
+				m_St.TargetFork1.Row_ID = 0;
+				m_St.TargetFork1.Station = m_ExtSEnv2.TravDrive.Home_Pos_StationNo;
+
+				if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_R;
+				}
+				else
+				{
+					m_pgmEnv.Move_PosFlag = MOVE_POSITION_FORK1_L;
+				}
+
+				nChk_Home_Pos = 1;
+			}
+
+			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].StartPos = m_St.Inv_St[INV_TRAVEL].Current_Pos;
+			m_WorkData[s_WorkInx].DrvData[INV_HOIST].StartPos = m_St.Inv_St[INV_HOIST].Current_Pos;
+
+			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Dir = Check_Trav_Move_Dir(s_WorkInx);
+			m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir = Check_Lift_Move_Dir(s_WorkInx);
+
+			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Spd = nDef_TravMove_Speed[m_ExtSEnv2.TravDrive.Home_Spd_Mode];
+			m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Spd = nDef_LiftMove_Speed[m_ExtSEnv2.TravDrive.Home_Spd_Mode];
+</pre></details><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_MOVING"><summary><span class="mono">RUN_SEQ_RETURN_HOME_MOVING</span> <span class="kind">dev_SRM.c:63177</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L63173 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_MOVING;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_TRAV_LIFF_STOP</span></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_WORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);</code><br><code>save_error_code(ERROR1_WORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_MOVING:
+
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(s_ChkTimer) &gt; s_Over_Time)
+			{
+				if (m_Trav_Sub_Run_Step != 10)
+				{
+					save_error_code(ERROR1_WORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);
+				}
+
+				if (m_Lift_Sub_Run_Step != 10)
+				{
+					save_error_code(ERROR1_WORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+				}
+
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+				break;</pre></details><details class="case-item" id="case_RUN_SEQ_RETURN_HOME_3"><summary><span class="mono">RUN_SEQ_RETURN_HOME_3</span> <span class="kind">dev_SRM.c:63220</span></summary><p><b>← 들어오는 전이</b> (최대 8건)</p><ul><li>L63211 from <span class="mono">(함수/초기화)</span>: <code>m_pgmEnv.SRM_RunMode = RUN_SEQ_RETURN_HOME_3;</code></li></ul><p><b>→ 나가는 전이</b>: <span class="mono">RUN_SEQ_ERROR_FORK_STOP</span></p><p><b>Save_*</b>: <code>Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);</code></p><p><b>save_error_code</b>: <code>save_error_code(ERROR1_EMPTY_GOODS, 1, m_pgmEnv.SRM_RunMode);</code></p><pre class="code-sm">	case RUN_SEQ_RETURN_HOME_3:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= DEF_DELAY_AFTER_MOVE)
+		{
+			Save_ForkMove_OrderProcess(0, CMD_MOVE_STEP_COMPELTE);
+
+			save_error_code(ERROR1_EMPTY_GOODS, 1, m_pgmEnv.SRM_RunMode);
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_RETURN_HOME_4</summary><p>case 본문 없음 (enum만)</p></details><h3 id="grp-misc">8. 기타 RunMode (41개)</h3><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SCAN_SENSOR_1</summary><p>L49642 → —</p><pre class="code-sm">	case RUN_SEQ_FORK_SCAN_SENSOR_1:
+		//Check_Invertor_Fault();
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SCAN_SENSOR_1</summary><p>L49647 → —</p><pre class="code-sm">	case RUN_SEQ_TRAV_SCAN_SENSOR_1:
+		//Check_Invertor_Fault();
+
+		if (m_pgmEnv.Trial_Run_Mode == 0)
+		{
+			if (Check_Modem_Alarm_1(1))
+			{
+				save_error_code(ERROR1_MODEM_ALARM, 1, 0);
+			}
+		}
+
+		if (Check_PDoor_Alarm(1))
+		{
+			save_error_code(ERROR1_DOOR_OPEN, 1, 0);
+		}
+
+		if (m_ExtSEnv2.TravDrive.ManualDrive.Torque_Alarm)
+		{
+			nToqueLimit = m_ExtSEnv2.TravDrive.ManualDrive.Torque_Alarm;
+		}
+		else
+		{
+			nToqueLimit = DEF_TRAV_OVERTORQUE;
+		}
+
+		if ((Get_Inverter_Actual_Touqe(INV_TRAVEL) &lt; (-nToqueLimit))
+			|| (Get_Inverter_Actual_Touqe(INV_TRAVEL) &gt; nToqueLimit))
+		{
+			save_error_code(ERROR1_INVERTER_TRAVEL, 5, abs(Get_Inverter_Actual_Touqe(INV_TRAVEL) / 10));
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SCAN_SENSOR_1</summary><p>L49680 → —</p><pre class="code-sm">	case RUN_SEQ_LIFT_SCAN_SENSOR_1:
+		/*
+		if (m_pgmEnv.ForceStopFlag)
+		{
+			m_pgmEnv.ForceStopFlag = 0;
+			save_error_code(ERROR_COMMAND_EMERGENCY, 1, 0);
+		}
+		*/
+
+		//Check_Invertor_Fault();
+
+		if (m_ExtSEnv2.LiftDrive.ManualDrive.Torque_Alarm)
+		{
+			nToqueLimit = m_ExtSEnv2.LiftDrive.ManualDrive.Torque_Alarm;
+		}
+		else
+		{
+			nToqueLimit = DEF_LIFT_OVERTORQUE;
+		}
+
+		if ((Get_Inverter_Actual_Touqe(INV_HOIST) &lt; (-nToqueLimit))
+			|| (Get_Inverter_Actual_Touqe(INV_HOIST) &gt; nToqueLimit))
+		{
+			save_error_code(ERROR1_INVERTER_HOIST, 5, abs(Get_Inverter_Actual_Touqe(INV_HOIST) / 10));
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_TEST_0</summary><p>L49707 → —</p><pre class="code-sm">	case RUN_SEQ_FORK_TEST_0:
+	case RUN_SEQ_FORK_TEST_1:</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_TEST_1</summary><p>L49708 → —</p><pre class="code-sm">	case RUN_SEQ_FORK_TEST_1:
+		//Check_Invertor_Fault();
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_MANUAL_MOVE</summary><p>L50452 → —</p><pre class="code-sm">	case RUN_SEQ_MANUAL_MOVE:
+		//Check_Invertor_Fault();
+
+		if (Check_Modem_Alarm_1(0))
+		{
+			save_error_code(ERROR1_MODEM_ALARM, 1, 0);
+		}
+
+		if (Check_PDoor_Alarm(1))
+		{
+			save_error_code(ERROR1_DOOR_OPEN, 1, 0);
+		}
+
+		if ((m_Manual_Ctr_Flag == MAN_CTR_TRAV) || (m_Manual_Ctr_Flag == MAN_CTR_LIFT))
+		{
+			if (m_St.SRM_Mode.Bit.Force == 0)
+			{
+				if (m_St.PosFork1.Position2.Bit.ForkCenter)
+				{
+					//포크 중심상태 일때, 포크 진출 감지 확인
+					if (Get_DI_State_Filter(IN_FOKL1))
+					{
+						save_error_code(ERROR1_FORK_SENSOR, 12, m_pgmEnv.SRM_RunMode);
+					}
+
+					if (Get_DI_State_Filter(IN_FOKR1))
+					{
+						save_error_code(ERROR1_FORK_SENSOR, 13, m_pgmEnv.SRM_RunMode);
+					}
+
+					if (Get_DI_State_Filter(IN_GWL1))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 1, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 좌측
+					}
+
+					if (Get_DI_State_Filter(IN_GWR1))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 2, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 우측
+					}
+
+					if (Get_DI_State_Filter(IN_GWLe1))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 3, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 좌측
+					}
+
+					if (Get_DI_State_Filter(IN_GWRe1))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 4, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 우측
+					}
+				}
+
+				if (m_St.PosFork2.Position2.Bit.ForkCenter)
+				{
+					if (Get_DI_State_Filter(IN_GWL2))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 19, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 좌측
+					}
+
+					if (Get_DI_State_Filter(IN_GWR2))
+					{
+						save_error_code(ERROR1_GOODS_WIDTH, 20, m_pgmEnv.SRM_RunMode);	// 화물 가로폭 이탈 이상 - 우측
+					}
+				}
+			}
+		}
+		else
+		{
+			// MAN_CTR_FORK_1
+			if (m_ExtSEnv2.CtrParam.ForkOut_cargo_misalignment_alarm &amp;&amp; (m_St.SRM_Mode.Bit.Force == 0))
+			{
+				if (Get_DI_State_Filter(IN_GHL1))
+				{
+					save_error_code(ERROR1_GOODS_VERTICAL, 6, m_pgmEnv.SRM_RunMode);	//
+				}
+
+				if (Get_DI_State_Filter(IN_GHR1))
+				{
+				</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_START</summary><p>L61861 → RUN_SEQ_STICKY_PRE_FORK_OUT</p><pre class="code-sm">	case RUN_SEQ_STICKY_START:
+		if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+		{
+			Motor_Brake_Enable(INV_HOIST);
+		}
+		else
+		{
+			//if (!m_SRM_TxPDO[INV_HOIST].StatusWord.B.ReleaseBrake)
+			if (Get_Motor_Brake_Release(INV_HOIST) == 0)
+			{
+				Motor_Brake_Release(INV_HOIST);
+			}
+		}
+
+		s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT);
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_PRE_FORK_OUT;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_PRE_FORK_OUT</summary><p>L61881 → —</p><pre class="code-sm">	case RUN_SEQ_STICKY_PRE_FORK_OUT:
+		nFlag = 0;
+		if (m_WorkData[s_WorkInx].IsStation)
+		{
+			asm volatile("NOP");
+		}
+		else
+		{
+			// 더블딥
+			if ((m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_2POS) \
+				|| (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_3POS))
+			{
+				if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 1)  // Left
+				{
+					if (Check_ODSTx_Sensor(POS_FORK_1, FORK_MOVE_LEFT))  nFlag = 1;
+				}
+				else if (m_WorkData[s_WorkInx].TargetPos.Row_ID == 4)  // Left
+				{
+					if (Check_ODSTx_Sensor(POS_FORK_1, FORK_MOVE_RIGHT))  nFlag = 2;
+				}
+			}
+		}
+
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (nFlag == 0)
+			{
+				if (s_Work_Fork_Flag &amp; cbits[0])
+				{
+					Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_STICKY_FORK_OUT_FROM);
+
+					s_Fork_TargetPos[0] = m_WorkData[s_WorkInx].ForkDepth[i];
+
+					if (m_WorkData[s_WorkInx].IsStation)
+					{
+						INT08U nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+						if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_SINGLE_DEEP)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FER_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FEL_NO_LOAD;
+							}
+						}
+						else if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_2POS)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FHR_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FHL_NO_LOAD;
+							}
+						}
+						else if (m_ExtSEnv.Machine.mType.Fork_Type == FORK_TYPE_DOUBLE_DEEP_3POS)
+						{
+							if (m_ExtSEnv1.StationEnv.StationSet[nStationNo].ForkDepth &gt; 0)
+							{
+								s_Fork_Oper_Mode = FORK_MOVE_CENTER_TO_FMR_NO_LOAD;
+							}
+							else
+							{
+								s_Fork_Oper_Mode = FORK_MOV</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT</summary><p>L62027 → RUN_SEQ_ERROR_FORK_STOP, RUN_SEQ_STICKY_AFTER_FORK_OUT</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code :
+			save_error_code(ERROR1_FORK_TIMEOUT, 1, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= DEF_DELAY_FORK_OUT_GET)
+				{
+					if (m_ExtSEnv.Machine.mType.Fork_Sensor_Type &amp; cbits[0])
+					{
+						// 포크 속도 위치 프로파일 제어
+						Fork_Auto_Profile_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx]);
+					}
+					else
+					{
+						// 포크 위치 제어
+						Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx], m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag);
+					}
+
+					if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_COMPLETE)
+					{
+						// Complete Fork Out
+						//s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT);
+
+						m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+						m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_AFTER_FORK_OUT;
+					}
+					else if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_STOP_3)
+					{
+						m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+					}
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_AFTER_FORK_OUT</summary><p>L62073 → RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP, RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT</p><pre class="code-sm">	case RUN_SEQ_STICKY_AFTER_FORK_OUT:
+		s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT_LIFT);
+
+		s_Pre_Sticky_Count = 0;
+
+		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP;
+		/*
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT_LIFT);
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LOADING_FORK_OUT_PRE_LIFT;
+		}
+		*/
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP</summary><p>L62091 → RUN_SEQ_ERROR_FORK_STOP, RUN_SEQ_STICKY_FORK_OUT_LIFT_UP</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Lift_MoveStart = m_St.Inv_St[INV_HOIST].Current_Pos;
+
+			/*
+			Set_TestStatus(DEBUG_STR_40, m_St.PosFork1.St_No);
+			Set_TestStatus(DEBUG_STR_41, m_St.PosFork1.Bay_No);
+			Set_TestStatus(DEBUG_STR_42, m_St.PosFork1.Level_No);
+			Set_TestStatus(DEBUG_STR_43, m_St.Inv_St[INV_HOIST].Current_Pos);
+			*/
+
+			//if (m_St.PosFork1.St_No)
+			if (m_WorkData[s_WorkInx].Station_No &gt; 0)
+			{
+				//nStationNo = m_St.PosFork1.St_No - 1;
+
+				nStationNo = m_WorkData[s_WorkInx].Station_No - 1;
+
+				//Set_TestStatus(DEBUG_STR_44, nStationNo);
+
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					+ m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset \
+					+ abs(m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset);
+			}
+			else
+			{
+
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					+ m_ExtSEnv2.LiftDrive.LevelUpOffset \
+					+ abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+			}
+
+			//Set_TestStatus(DEBUG_STR_45, s_Lift_MoveTarget);
+
+			//nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_AUTO_FORKOUT);
+			nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_STICKY);
+
+			if (nLift_Control_Error)
+			{
+				save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);
+				/*
+				if (nLift_Control_Error == M_CTR_ERROR_FALUT)
+				{
+					save_error_code(ERROR1_INVERTOR_LIFT, 3, m_pgmEnv.SRM_RunMode);
+				}
+				else
+				{
+					save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);
+				}
+				*/
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_STICKY_FORK_UP_FROM);
+
+				s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_OUT_LIFT);
+
+				SetTimer1ms(&amp;s_Lift_Move_Timer);
+
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_S</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_LIFT_UP</summary><p>L62158 → RUN_SEQ_ERROR_TRAV_LIFF_STOP, RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_UP</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_LIFT_UP:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_WORK_TIMEOUT, 4, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else
+			{
+				nFinish_flag = 0;
+				if (check_inverter_In_position_reach(INV_HOIST, s_Lift_MoveTarget))
+				{
+					nFinish_flag |= cbits[1];
+					if (!s_Lift_MoveComplete)
+					{
+						s_Lift_MoveComplete = 1;
+
+						if (m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir == LIFT_MOVE_UP)
+						{
+							s_Lift_MoveDistance = m_St.Inv_St[INV_HOIST].Current_Pos - s_Lift_MoveStart;
+						}
+						else if (m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir == LIFT_MOVE_DOWN)
+						{
+							s_Lift_MoveDistance = s_Lift_MoveStart - m_St.Inv_St[INV_HOIST].Current_Pos;
+						}
+						else
+						{
+							s_Lift_MoveDistance = 0;
+						}
+
+						Update_Operation_Info_Distance(INV_HOIST, s_Lift_MoveDistance);
+						Update_Operation_Info_Time(INV_HOIST, getCalcTimer1ms(s_Lift_Move_Timer));
+					}
+				}
+
+				if (nFinish_flag == 0x02)
+				{
+					s_Lift_MoveComplete = 0;
+
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT_LIFT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_UP;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_UP</summary><p>L62213 → RUN_SEQ_ERROR_TRAV_LIFF_STOP, RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_DOWN</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_UP:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+			{
+				Motor_Brake_Enable(INV_HOIST);
+			}
+
+			if (s_Work_Fork_Flag &amp; cbits[0])
+			{
+				if (Check_ForkOut_After_MoveLift_ForkSensor(s_Fork_Oper_Mode))
+				{
+					// 승강 후, 포크센서 미감지 이상 발생.
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+				}
+				else
+				{
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_OUT_LIFT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_DOWN;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_DOWN</summary><p>L62240 → RUN_SEQ_ERROR_FORK_STOP, RUN_SEQ_STICKY_FORK_OUT_LIFT_DOWN</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_DOWN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			/*
+			s_Lift_MoveTarget = m_St.Inv_St[INV_LIFT].Current_Pos \
+				- m_ExtSEnv2.LiftDrive.LevelUpOffset \
+				- abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+			*/
+
+			INT08U nStationNo = 0;
+			if (m_St.PosFork1.St_No &gt; 0)
+			{
+				nStationNo = m_St.PosFork1.St_No - 1;
+
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					- m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelUpOffset \
+					- abs(m_ExtSEnv1.StationEnv.StationSet[nStationNo].LevelDnOffset);
+			}
+			else
+			{
+				s_Lift_MoveTarget = m_St.Inv_St[INV_HOIST].Current_Pos \
+					- m_ExtSEnv2.LiftDrive.LevelUpOffset \
+					- abs(m_ExtSEnv2.LiftDrive.LevelDnOffset);
+			}
+
+			//m_TestStatus.Ctrl[DEBUG_CTR_4] = m_St.Inv_St[INV_LIFT].Current_Pos;
+			//m_TestStatus.Ctrl[DEBUG_CTR_5] = s_Lift_MoveTarget;
+
+			//nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_AUTO_FORKOUT);
+			nLift_Control_Error = Auto_Ctr_Lift(s_Lift_MoveTarget, LIFT_VEL_LIFT_STICKY);
+
+			if (nLift_Control_Error)
+			{
+				save_error_code(ERROR1_INVERTER_HOIST, 4, nLift_Control_Error);
+				//save_error_code(ERROR1_LIFT_CTR_DATA, nLift_Control_Error, m_pgmEnv.SRM_RunMode);
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_STICKY_FORK_DOWN_FROM);
+
+				s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_OUT_LIFT);
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_LIFT_DOWN;
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_LIFT_DOWN</summary><p>L62288 → RUN_SEQ_ERROR_TRAV_LIFF_STOP, RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_DOWN</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_LIFT_DOWN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_WORK_TIMEOUT, 5, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+			}
+			else
+			{
+				nFinish_flag = 0;
+				if (check_inverter_In_position_reach(INV_HOIST, s_Lift_MoveTarget))
+				{
+					nFinish_flag |= cbits[1];
+				}
+
+				if (nFinish_flag == 0x02)
+				{
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_OUT_LIFT);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_DOWN;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_DOWN</summary><p>L62321 → RUN_SEQ_ERROR_TRAV_LIFF_STOP, RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP, RUN_SEQ_STICKY_PRE_FORK_IN</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_OUT_AFTER_LIFT_DOWN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			if (m_ExtSEnv2.CtrParam.ForkOut_LT_BrakeOn_Flag)
+			{
+				Motor_Brake_Enable(INV_HOIST);
+			}
+
+			if (s_Work_Fork_Flag &amp; cbits[0])
+			{
+				if (Check_ForkOut_After_MoveLift_ForkSensor(s_Fork_Oper_Mode))
+				{
+					// 승강 후, 포크센서 미감지 이상 발생.
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+				}
+				else
+				{
+
+					s_Over_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_BEFORE_FORK_CENTER);
+
+					//	if (++s_Pre_Sticky_Count  &lt; s_Pre_Sticky_Num)
+					//	{
+					//		m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					//		m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_OUT_PRE_LIFT_UP;
+					//	}
+					//	else
+					{
+						Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_STICKY_FORK_IN_FROM);
+						m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+						m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_PRE_FORK_IN;
+					}
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_PRE_FORK_IN</summary><p>L62357 → RUN_SEQ_STICKY_FORK_IN</p><pre class="code-sm">	case RUN_SEQ_STICKY_PRE_FORK_IN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_MOVE_FORK_CENTER);
+
+			s_Fork_TargetPos[0] = 0;
+
+			if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FEL_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FEL_TO_CENTER_NO_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FML_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FML_TO_CENTER_NO_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHL_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FHL_TO_CENTER_NO_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FER_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FER_TO_CENTER_NO_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FMR_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FMR_TO_CENTER_NO_LOAD;
+			}
+			else if (s_Fork_Oper_Mode == FORK_MOVE_CENTER_TO_FHR_NO_LOAD)
+			{
+				s_Fork_Oper_Mode = FORK_MOVE_FHR_TO_CENTER_NO_LOAD;
+			}
+
+			m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_FORK_IN;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_FORK_IN</summary><p>L62396 → RUN_SEQ_ERROR_FORK_STOP, RUN_SEQ_STICKY_AFTER_FORK_IN</p><pre class="code-sm">	case RUN_SEQ_STICKY_FORK_IN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+		{
+			/////////////////////////////////////////////////////
+			// Error Code : 
+			save_error_code(ERROR1_FORK_TIMEOUT, 2, m_pgmEnv.SRM_RunMode);
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		else
+		{
+			if (Check_SRM_Error_State())
+			{
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+			}
+			else
+			{
+				if (m_ExtSEnv.Machine.mType.Fork_Sensor_Type &amp; cbits[0])
+				{
+					// 포크 속도 위치 프로파일 제어
+					Fork_Auto_Profile_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx]);
+				}
+				else
+				{
+					// 포크 위치 제어
+					//Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_ForkTragetPos[0]);
+					Fork_Auto_Position_Control(s_Fork_Oper_Mode, s_Fork_TargetPos[0], &amp;m_WorkData[s_WorkInx], m_WorkData[s_WorkInx].PLC_Interlock_NoUseFlag);
+				}
+
+				if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_COMPLETE)
+				{
+					m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+					s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_AFTER_FORK_CENTER);
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_AFTER_FORK_IN;
+				}
+				else if (m_Fork_Sub_Run_Step == AUTO_POS_CTR_FORK_STOP_3)
+				{
+					m_Fork_Sub_Run_Step = AUTO_POS_CTR_FORK_STAND_BY;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+				}
+			}
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_AFTER_FORK_IN</summary><p>L62441 → RUN_SEQ_STICKY_COMPLETE</p><pre class="code-sm">	case RUN_SEQ_STICKY_AFTER_FORK_IN:
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Delay_Time)
+		{
+			// 파라미터 수정 후 코딩
+			//s_Delay_Time = DEF_TIMEOUT_CHK_GOX;
+
+			if (m_WorkData[s_WorkInx].Not_Check_Goods)
+			{
+				s_Over_Time = 600000;
+			}
+			else
+			{
+				s_Over_Time = Get_OverTime_Auto(AUTO_TIMEOUT_DETECT_GOODS);
+			}
+
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STICKY_COMPLETE;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_STICKY_COMPLETE</summary><p>L62461 → RUN_SEQ_ERROR_FORK_STOP</p><pre class="code-sm">	case RUN_SEQ_STICKY_COMPLETE:
+		if (s_Over_Time &gt; 0)
+		{
+			if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt;= s_Over_Time)
+			{
+				if (m_WorkData[s_WorkInx].IsStation)
+				{
+					// 스테이션 로딩 작업후
+					if (s_Work_Fork_Flag &amp; cbits[0])
+					{
+						save_error_code(ERROR1_EMPTY_GOODS, 4, m_pgmEnv.SRM_RunMode);
+					}
+
+					m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+					m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+					break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_MANUAL_MOVE</summary><p>L63232 → —</p><pre class="code-sm">	case RUN_SEQ_MANUAL_MOVE:
+		Manual_Position_Move_Process();
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_TEST_0</summary><p>L63319 → RUN_SEQ_FORK_TEST_1, RUN_SEQ_STAND_BY</p><pre class="code-sm">	case RUN_SEQ_FORK_TEST_0:
+		m_SRM_Sub_RunStep_0 = 0;
+
+		if ((m_pgmEnv.Fork_Test_Position &gt;= (INT32S)m_ExtSEnv2.ForkDrive.ManualDrive.LeftPos)
+			&amp;&amp; (m_pgmEnv.Fork_Test_Position &lt;= (INT32S)m_ExtSEnv2.ForkDrive.ManualDrive.RightPos))
+		{
+			s_Fork_Oper_Mode = m_pgmEnv.Fork_Test_Mode;
+
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_TEST_1;
+		}
+		else
+		{
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_TEST_1</summary><p>L63335 → RUN_SEQ_STAND_BY</p><pre class="code-sm">	case RUN_SEQ_FORK_TEST_1:
+		Fork_Auto_Position_Control_1(s_Fork_Oper_Mode, m_pgmEnv.Fork_Test_Position);
+
+		if ((m_SRM_Sub_RunStep_0 == 50) || (m_SRM_Sub_RunStep_0 == 103))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SCAN_SENSOR_0</summary><p>L63345 → RUN_SEQ_TRAV_SCAN_SENSOR_1</p><pre class="code-sm">	case RUN_SEQ_TRAV_SCAN_SENSOR_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_SCAN_SENSOR_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SCAN_SENSOR_1</summary><p>L63351 → RUN_SEQ_STAND_BY, RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_TRAV_SCAN_SENSOR_1:
+		Scan_Travel_Position_Sensor();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SCAN_SENSOR_STOP</summary><p>L63366 → RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_TRAV_SCAN_SENSOR_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SCAN_SENSOR_0</summary><p>L63371 → RUN_SEQ_LIFT_SCAN_SENSOR_1</p><pre class="code-sm">	case RUN_SEQ_LIFT_SCAN_SENSOR_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_SCAN_SENSOR_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SCAN_SENSOR_1</summary><p>L63377 → RUN_SEQ_STAND_BY, RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_LIFT_SCAN_SENSOR_1:
+		Scan_Lift_Position_Sensor();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SCAN_SENSOR_STOP</summary><p>L63392 → RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_LIFT_SCAN_SENSOR_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SCAN_SENSOR_0</summary><p>L63397 → RUN_SEQ_FORK_SCAN_SENSOR_1</p><pre class="code-sm">	case RUN_SEQ_FORK_SCAN_SENSOR_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_SCAN_SENSOR_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SCAN_SENSOR_1</summary><p>L63403 → RUN_SEQ_STAND_BY, RUN_SEQ_ERROR_FORK_STOP</p><pre class="code-sm">	case RUN_SEQ_FORK_SCAN_SENSOR_1:
+		Scan_Fork_Position_Sensor();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SCAN_SENSOR_STOP</summary><p>L63418 → RUN_SEQ_ERROR_FORK_STOP</p><pre class="code-sm">	case RUN_SEQ_FORK_SCAN_SENSOR_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SETUP_MOVE_0</summary><p>L63423 → RUN_SEQ_TRAV_SETUP_MOVE_1</p><pre class="code-sm">	case RUN_SEQ_TRAV_SETUP_MOVE_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_SETUP_MOVE_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SETUP_MOVE_1</summary><p>L63429 → RUN_SEQ_STAND_BY, RUN_SEQ_TRAV_SETUP_MOVE_STOP</p><pre class="code-sm">	case RUN_SEQ_TRAV_SETUP_MOVE_1:
+		Travel_Setup_Move_Position();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_SETUP_MOVE_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_TRAV_SETUP_MOVE_STOP</summary><p>L63444 → RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_TRAV_SETUP_MOVE_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SETUP_MOVE_0</summary><p>L63449 → RUN_SEQ_LIFT_SETUP_MOVE_1</p><pre class="code-sm">	case RUN_SEQ_LIFT_SETUP_MOVE_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_SETUP_MOVE_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SETUP_MOVE_1</summary><p>L63455 → RUN_SEQ_STAND_BY, RUN_SEQ_LIFT_SETUP_MOVE_STOP</p><pre class="code-sm">	case RUN_SEQ_LIFT_SETUP_MOVE_1:
+		Lift_Setup_Move_Position();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_LIFT_SETUP_MOVE_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_LIFT_SETUP_MOVE_STOP</summary><p>L63470 → RUN_SEQ_ERROR_TRAV_LIFF_STOP</p><pre class="code-sm">	case RUN_SEQ_LIFT_SETUP_MOVE_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SETUP_MOVE_0</summary><p>L63475 → RUN_SEQ_FORK_SETUP_MOVE_1</p><pre class="code-sm">	case RUN_SEQ_FORK_SETUP_MOVE_0:
+		m_SRM_Sub_RunStep_0 = 1;
+
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_SETUP_MOVE_1;
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SETUP_MOVE_1</summary><p>L63481 → RUN_SEQ_STAND_BY, RUN_SEQ_FORK_SETUP_MOVE_STOP</p><pre class="code-sm">	case RUN_SEQ_FORK_SETUP_MOVE_1:
+		Fork_Setup_Move_Position();
+
+		if ((m_SRM_Sub_RunStep_0 == 50))
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_STAND_BY;
+		}
+		else if (m_SRM_Sub_RunStep_0 == 100)
+		{
+			m_SRM_Sub_RunStep_0 = 0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_FORK_SETUP_MOVE_STOP;
+		}
+		break;</pre></details><details class="case-item"><summary class="mono">RUN_SEQ_FORK_SETUP_MOVE_STOP</summary><p>L63496 → RUN_SEQ_ERROR_FORK_STOP</p><pre class="code-sm">	case RUN_SEQ_FORK_SETUP_MOVE_STOP:
+		m_SRM_Sub_RunStep_0 = 0;
+		m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_FORK_STOP;
+		break;</pre></details>
+<h2 id="tml-all">Part H — TML 수신 핸들러</h2>
+<h3>H.1 핵심 7개 (자동운전)</h3><table class="data-table">
+<tr><th>TY_*</th><th>함수</th><th>역할</th></tr><tr><td>TY_STATUS_REQ (0x30)</td><td class="mono">rxStatusReq</td><td>m_St 폴링 응답</td></tr><tr><td>TY_CMD_ORDER (0x41)</td><td class="mono">rxCmdOrder</td><td>작업명령 → SRM_Fork_Work_Cmd</td></tr><tr><td>TY_CMD_START (0x50)</td><td class="mono">rxCmdStart</td><td>SRM_Start_On → RUN_SEQ_START</td></tr><tr><td>TY_CMD_MOVE_HOME (0x51)</td><td class="mono">rxCmd_MoveHome</td><td>홈 이동</td></tr><tr><td>TY_CMD_ERROR_RESET (0x52)</td><td class="mono">rxCmdErrorReset</td><td>에러 리셋</td></tr><tr><td>TY_CMD_ORDER_DELETE (0x53)</td><td class="mono">rxCmdOrderDelete</td><td>작업 삭제</td></tr><tr><td>TY_EMERGENCY_STOP (0x55)</td><td class="mono">rxCmdEmergencyStop</td><td>비상정지</td></tr></table><h3>H.2 전체 (com_tml.c switch, 61개)</h3>
+<details><summary>파라미터·다운로드·시험 포함 전체 목록</summary>
+<table class="data-table"><tr><th>TY_*</th><th>rx 함수</th></tr><tr><td class="mono">TY_ALARMLOG_REQUEST</td><td class="mono">rxAlarmLogRequest</td></tr><tr><td class="mono">TY_ALARMLOG_DELETE</td><td class="mono">rxAlarmLogDelete</td></tr><tr><td class="mono">TY_OPERATION_INFO_REQ</td><td class="mono">rxOperationInfo_Req</td></tr><tr><td class="mono">TY_INVERTOR_INFO_REQ</td><td class="mono">rxInvertorInfo_Req</td></tr><tr><td class="mono">TY_CMD_TASK_ORDER</td><td class="mono">rxTaskCmdOrder</td></tr><tr><td class="mono">TY_CMD_ORDER</td><td class="mono">rxCmdOrder</td></tr><tr><td class="mono">TY_CMD_REFERENCE</td><td class="mono">rxCmdReferenceSearch</td></tr><tr><td class="mono">TY_CMD_START</td><td class="mono">rxCmdStart</td></tr><tr><td class="mono">TY_CMD_MOVE_HOME</td><td class="mono">rxCmd_MoveHome</td></tr><tr><td class="mono">TY_CMD_MOVE_MAINTANENCE</td><td class="mono">rxCmdMoveMaintanence</td></tr><tr><td class="mono">TY_CMD_ERROR_RESET</td><td class="mono">rxCmdErrorReset</td></tr><tr><td class="mono">TY_CMD_ORDER_DELETE</td><td class="mono">rxCmdOrderDelete</td></tr><tr><td class="mono">TY_NORMAL_STOP_REQ</td><td class="mono">rxCmdNormalStop</td></tr><tr><td class="mono">TY_EMERGENCY_STOP_REQ</td><td class="mono">rxCmdEmergencyStop</td></tr><tr><td class="mono">TY_MODE_CHANGE</td><td class="mono">rxModeChange</td></tr><tr><td class="mono">TY_CMD_MANUAL</td><td class="mono">rxCmdManual</td></tr><tr><td class="mono">TY_INVERTOR_PARAM_REQ</td><td class="mono">rxInvertorParameterReq</td></tr><tr><td class="mono">TY_INVERTOR_PARAM_SET</td><td class="mono">rxInvertorParameterSet</td></tr><tr><td class="mono">TY_RACK_ENV_REQ</td><td class="mono">rxRackEnvReq</td></tr><tr><td class="mono">TY_RACK_ENV_SET</td><td class="mono">rxRackEnvSet</td></tr><tr><td class="mono">TY_CELL_ENV_REQ</td><td class="mono">rxCellEnvReq</td></tr><tr><td class="mono">TY_CELL_ENV_SET</td><td class="mono">rxCellEnvSet</td></tr><tr><td class="mono">TY_CELL_OFFSET_ENV_REQ</td><td class="mono">rxCell_Offset_EnvReq</td></tr><tr><td class="mono">TY_CELL_OFFSET_ENV_SET</td><td class="mono">rxCell_Offset_EnvSet</td></tr><tr><td class="mono">TY_STATION_ENV_REQ</td><td class="mono">rxStationEnvReq</td></tr><tr><td class="mono">TY_STATION_ENV_SET</td><td class="mono">rxStationEnvSet</td></tr><tr><td class="mono">TY_PROHIBIT_RACK_ENV_REQ</td><td class="mono">rxProhibitRackEnvReq</td></tr><tr><td class="mono">TY_PROHIBIT_RACK_ENV_SET</td><td class="mono">rxProhibitRackEnvSet</td></tr><tr><td class="mono">TY_SPECIAL_RACK_ENV_REQ</td><td class="mono">rxSpecialRackEnvReq</td></tr><tr><td class="mono">TY_SPECIAL_RACK_ENV_SET</td><td class="mono">rxSpecialRackEnvSet</td></tr><tr><td class="mono">TY_SETUP_INITIALIZE_SET</td><td class="mono">rxRackEnvInitializeSet</td></tr><tr><td class="mono">TY_CONTROL_REQ</td><td class="mono">rxControlParamterReq</td></tr><tr><td class="mono">TY_CONTROL_SET</td><td class="mono">rxControlParamterSet</td></tr><tr><td class="mono">TY_TRAVEL_DRIVE_REQ</td><td class="mono">rxTravelDriveParamterReq</td></tr><tr><td class="mono">TY_TRAVEL_DRIVE_SET</td><td class="mono">rxTravelDriveParamterSet</td></tr><tr><td class="mono">TY_LIFT_DRIVE_REQ</td><td class="mono">rxLiftDriveParamterReq</td></tr><tr><td class="mono">TY_LIFT_DRIVE_SET</td><td class="mono">rxLiftDriveParamterSet</td></tr><tr><td class="mono">TY_FORK_DRIVE_REQ</td><td class="mono">rx_Fork_Drive_Paramter_Req</td></tr><tr><td class="mono">TY_FORK_DRIVE_SET</td><td class="mono">rx_Fork_Drive_Paramter_Set</td></tr><tr><td class="mono">TY_READ_GROUP_LIST</td><td class="mono">rxHT100_GroupListReq</td></tr><tr><td class="mono">TY_READ_PARAM_INFO</td><td class="mono">rxHT100_ParamInfo</td></tr><tr><td class="mono">TY_WRITE_PARAM_SET</td><td class="mono">rxHT100_WriteParamSet</td></tr><tr><td class="mono">TY_MCU_TEST</td><td class="mono">rxMcuTestReq</td></tr><tr><td class="mono">TY_DEVICE_STATUS</td><td class="mono">rxDeviceStatusReq</td></tr><tr><td class="mono">TY_DEVICE_CONTROL</td><td class="mono">rxDeviceControlReq</td></tr><tr><td class="mono">TY_TEST_STATUS</td><td class="mono">rxTestStatusReq</td></tr><tr><td class="mono">TY_TEST_CONTROL</td><td class="mono">rxTestControlReq</td></tr><tr><td class="mono">TY_GRAPH_REQUEST</td><td class="mono">rxGraphRequest</td></tr><tr><td class="mono">TY_MANUNAL_OUTPUT_CONTROL</td><td class="mono">rxManualOutCTR_Request</td></tr><tr><td class="mono">TY_DOWNLOAD_START</td><td class="mono">rxDownloadStart</td></tr><tr><td class="mono">TY_DOWNLOAD_DATA</td><td class="mono">rxDownloadData</td></tr><tr><td class="mono">TY_DOWNLOAD_END</td><td class="mono">rxDownloadFinish</td></tr><tr><td class="mono">TY_FUNC_CONTROL</td><td class="mono">rxFuncControlReq</td></tr><tr><td class="mono">TY_DIO_FORM_REQ</td><td class="mono">rxDigital_IO_Form_Req</td></tr><tr><td class="mono">TY_DIO_FORM_CONTROL</td><td class="mono">rxDigital_IO_Form_Control</td></tr><tr><td class="mono">TY_MACHINE_SPEC_STATUS</td><td class="mono">rxMachine_Type_Req</td></tr><tr><td class="mono">TY_MACHINE_SPEC_CONTROL</td><td class="mono">rxMachine_Type_Set</td></tr><tr><td class="mono">TY_CMD_DEMO_CONTROL</td><td class="mono">rxDemoControl</td></tr><tr><td class="mono">TY_CMD_SCAN_POSITION_SENSOR</td><td class="mono">rxScan_Position_Sensor_Control</td></tr><tr><td class="mono">TY_DSP_STATUS</td><td class="mono">rxDSP_Status</td></tr><tr><td class="mono">TY_DSP_DATA</td><td class="mono">rxDSP_Control</td></tr></table></details>
+<h2 id="store-save-fns">Part I — Store_* / Save_* 함수 목록</h2>
+<h3>I.1 Store_* (dev_SRM.c static — 입력/큐)</h3><ul><li class="mono">Store_Fork_WorkStatus (L44879)</li><li class="mono">Store_Fork_Work_1 (L44912)</li><li class="mono">Store_Work_Data (L44938)</li><li class="mono">Store_Work_Data_Fix (L44996)</li><li class="mono">Store_Work_Data_1 (L45040)</li><li class="mono">Store_Work_Data_Task (L45109)</li></ul><h3>I.2 Save_* (alarm.c — 출력/보고)</h3><ul><li class="mono">Save_ForkMove_OrderStatus() → m_St + BKPSRAM</li><li class="mono">Save_ForkMove_OrderProcess() → m_St + BKPSRAM</li><li class="mono">Save_ForkWork_OrderStatus() → m_St + BKPSRAM</li><li class="mono">Save_ForkWork_OrderProcess() → m_St + BKPSRAM</li><li class="mono">Save_ForkWork_Information() → m_St + BKPSRAM</li></ul>
+<h2 id="fork-steps">Part J — 지상반 스텝 코드 (OrderProcess)</h2>
+<h3>J.1 WORK_STATUS (작업 결과)</h3><table class="data-table"><tr><th>이름</th><th>값</th></tr><tr><td class="mono">WORK_STATUS_NONE</td><td>0</td></tr><tr><td class="mono">WORK_STATUS_IMPOSSIBLE</td><td>1</td></tr><tr><td class="mono">WORK_STATUS_DOING</td><td>2</td></tr><tr><td class="mono">WORK_STATUS_FAIL</td><td>3</td></tr><tr><td class="mono">WORK_STATUS_COMPLETE</td><td>4</td></tr><tr><td class="mono">WORK_STATUS_STOP</td><td>5</td></tr></table><h3>J.2 CMD_FORK_STEP (포크 작업 진행 — Save_ForkWork_OrderProcess 인자)</h3>
+<table class="data-table"><tr><th>enum</th><th>값</th><th>현장 의미(개요)</th></tr><tr><td class="mono">CMD_FORK_STEP_NONE</td><td>0</td><td>—</td></tr></table><p>지상반 화면 "스텝" = <code>m_St.ForkWork[0].OrderProcess_Fork</code> 이 값.</p>
+<h2 id="files">Part K — Core/Src 파일 맵</h2><table class="data-table"><tr><th>파일</th><th>줄</th><th>역할</th></tr><tr><td class="mono">FlashSST26.c</td><td>1,658</td><td>인프라/보조</td></tr><tr><td class="mono">Mcu_Test.c</td><td>999</td><td>인프라/보조</td></tr><tr><td class="mono">SRM_Parameter.c</td><td>6,292</td><td>Flash 파라미터</td></tr><tr><td class="mono">alarm.c</td><td>1,959</td><td>Save_*·DI/DO·에러</td></tr><tr><td class="mono">can.c</td><td>210</td><td>인프라/보조</td></tr><tr><td class="mono">com_Debug.c</td><td>156</td><td>인프라/보조</td></tr><tr><td class="mono">com_dsp.c</td><td>616</td><td>인프라/보조</td></tr><tr><td class="mono">com_hmi.c</td><td>352</td><td>HMI Modbus</td></tr><tr><td class="mono">com_tml.c</td><td>6,494</td><td>TML 0x30/0x41/0x50</td></tr><tr><td class="mono">com_udp.c</td><td>994</td><td>인프라/보조</td></tr><tr><td class="mono">dev_SRM.c</td><td>68,367</td><td>상태머신·축제어·Store_*</td></tr><tr><td class="mono">ecat_coe.c</td><td>1,125</td><td>인프라/보조</td></tr><tr><td class="mono">ecat_combase.c</td><td>1,202</td><td>인프라/보조</td></tr><tr><td class="mono">ecat_config.c</td><td>1,176</td><td>인프라/보조</td></tr><tr><td class="mono">ecat_dc.c</td><td>409</td><td>인프라/보조</td></tr><tr><td class="mono">ecat_main.c</td><td>5,148</td><td>EtherCAT PDO</td></tr><tr><td class="mono">encoder.c</td><td>88</td><td>인프라/보조</td></tr><tr><td class="mono">flash.c</td><td>300</td><td>인프라/보조</td></tr><tr><td class="mono">fpga.c</td><td>835</td><td>인프라/보조</td></tr><tr><td class="mono">fpgatcpipstack.c</td><td>944</td><td>인프라/보조</td></tr><tr><td class="mono">main.c</td><td>1,708</td><td>부트·HAL·while(1)·timer1ms</td></tr><tr><td class="mono">mcu_util.c</td><td>138</td><td>인프라/보조</td></tr><tr><td class="mono">rtc.c</td><td>552</td><td>BKPSRAM</td></tr><tr><td class="mono">stm32f7xx_hal_msp.c</td><td>761</td><td>인프라/보조</td></tr><tr><td class="mono">stm32f7xx_it.c</td><td>430</td><td>인프라/보조</td></tr><tr><td class="mono">syscalls.c</td><td>156</td><td>인프라/보조</td></tr><tr><td class="mono">sysmem.c</td><td>80</td><td>인프라/보조</td></tr><tr><td class="mono">system_stm32f7xx.c</td><td>260</td><td>인프라/보조</td></tr><tr><td class="mono">uart.c</td><td>501</td><td>인프라/보조</td></tr><tr><td class="mono">upgrade.c</td><td>904</td><td>인프라/보조</td></tr><tr><td class="mono">usb_user.c</td><td>473</td><td>인프라/보조</td></tr></table>
+<h2 id="struct8">Part L — 핵심 8대 구조체 (변수 ↔ 역할)</h2>
+<table class="data-table">
+<tr><th>변수</th><th>타입</th><th>층</th><th>역할</th></tr>
+<tr><td class="mono">m_St</td><td>StatusSTR</td><td>출력</td><td>0x30 지상반 상태. ForkWork[], Inv_St[]</td></tr>
+<tr><td class="mono">m_pgmEnv</td><td>PGMEnvSTR</td><td>실행</td><td>RunMode, timer1ms, 내부 플래그 (지상반 비공개)</td></tr>
+<tr><td class="mono">m_WorkData</td><td>SRM_WorkDataSTR[30]</td><td>입력/실행</td><td>static 실행 큐. ForkAct, TargetPos</td></tr>
+<tr><td class="mono">m_BKSram</td><td>BKSRamSTR</td><td>출력/복구</td><td>정전복구 AlarmLog, WorkInfo</td></tr>
+<tr><td class="mono">m_ExtSEnv0~2</td><td>ExtFlash*</td><td>파라미터</td><td>랙/스테이션/포크/타임아웃 Flash</td></tr>
+<tr><td class="mono">WorkCmd</td><td>WorkCmdSTR</td><td>입력</td><td>0x41 패킷 파싱 형식</td></tr>
+</table>
+<p>멤버 트리 → <a href="SRM_구조체트리.html">구조체 트리</a></p>
+
+<h2 id="patterns">코딩 패턴</h2>
+<div class="pattern-card"><h4>RunMode case</h4><pre class="code">case RUN_SEQ_XXX:
+  if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) &gt; MS)
+    m_pgmEnv.SRM_RunMode = RUN_SEQ_다음;
+  break;</pre><p>매 루프 1스텝. break 필수.</p></div><div class="pattern-card"><h4>nFlag 비트맵</h4><pre class="code">nFlag |= cbits[0]; // bit0
+// 0x03 = 둘 다 OK</pre><p>축 상태를 에러 서브코드로.</p></div><div class="pattern-card"><h4>Store vs Save</h4><pre class="code">Store_Work_Data_1(...); // m_WorkData
+Save_ForkWork_OrderProcess(0, STEP); // m_St</pre><p>Store=레시피, Save=보고.</p></div><div class="pattern-card"><h4>타이머</h4><pre class="code">m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+getCalcTimer1ms(...) &gt; 3000</pre><p>1ms ISR 기반.</p></div>
+
+<h2 id="traps">명명 함정</h2>
+<div class="trap-card"><div class="mono">GoodsFlag_Or_MoveHome</div><b>함정</b>: 화물 플래그?<br><b>실제</b>: 축마다 다름. 포크=화물, 주행/승강=홈복귀.</div><div class="trap-card"><div class="mono">Rack_fork_obstruction</div><b>함정</b>: 물리 간섭?<br><b>실제</b>: InPosition 스킵 방지. 1이면 재이동.</div><div class="trap-card"><div class="mono">Store vs Save</div><b>함정</b>: 둘 다 저장<br><b>실제</b>: Store=큐+접수, Save=진행보고.</div><div class="trap-card"><div class="mono">ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE</div><b>함정</b>: 좌측 이동?<br><b>실제</b>: 컴파일 옵션. 주행+승강 브레이크 확인.</div>
+
+<h2 id="exercise">연습문제</h2>
+<details><summary>0x41 후 RunMode는?</summary><p>STAND_BY (Start 전)</p></details>
+<details><summary>실행 레시피 변수?</summary><p>m_WorkData (static)</p></details>
+<details><summary>지상반 스텝 보고 함수?</summary><p>Save_ForkWork_OrderProcess</p></details>
+<details><summary>nFlag 0x03?</summary><p>주행+승강 브레이크 둘 다 해제 확인</p></details>
+
+<h2 id="transfer">타 설비 이식</h2>
+<p>명령→큐→상태머신→보고 4층, RunMode switch, nFlag 에러, timer1ms — SRM에서 완성형 패턴.</p>
+</main></div><script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryTextColor:'#111',fontSize:'12px'}});</script></body></html>

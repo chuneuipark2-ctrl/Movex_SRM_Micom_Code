@@ -818,17 +818,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		AlarmManager();
+		AlarmManager(); //DI/DO, 에러, SAVE_* 트리거
 
-		FpgaManager();
+		FpgaManager(); //FPGA 통신
 
-		McuComManager();
+		McuComManager(); //MCU 보조 통신
 
-		TMLComManager();
+		TMLComManager(); //지상반 UART 수신/송신
 
-		EtherNetManager();
+		EtherNetManager(); // 이더넷
 
-		ECAT_Manager();
+		ECAT_Manager(); //인버터 PDO 갱신
 
 		//DSP_ComManager();
 
@@ -840,12 +840,23 @@ int main(void)
 		}
 		else
 		{
-			SRM_Manager();
+			SRM_Manager(); //SRM 제어 진입
+			/*
+			 * SRM_Machine_Process() // SSR/연결 등
+			 * SRM_Machine_Run_Process() // 상태머신 본체
+			 * HMI_ModbusTCP_Proc()
+			 * */
 			MCU_Test_Manager();
 		}
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
+
+    /*
+     *
+     *
+     * */
+
 
     /* USER CODE BEGIN 3 */
 #if ENABLE_WATCHDOG

@@ -1,6 +1,6 @@
 /**
- * SRM 전체코드 학습가이드 HTML 생성
- * 출력: SRM_전체코드_학습가이드_YYYYMMDD.html
+ * SRM 전체코드 학습가이드 — 완전판 HTML 생성
+ * 큰 흐름 → 작은 흐름, 코드 자동 추출 포함
  */
 const fs = require("fs");
 const path = require("path");
@@ -10,6 +10,11 @@ const CORE = path.join(ROOT, "Core");
 const INC = path.join(CORE, "Inc");
 const SRC = path.join(CORE, "Src");
 const OUT = __dirname;
+
+const DEV_SRM = path.join(SRC, "dev_SRM.c");
+const COM_TML = path.join(SRC, "com_tml.c");
+const ALARM = path.join(SRC, "alarm.c");
+const MAIN = path.join(SRC, "main.c");
 
 const TODAY = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 const TODAY_DISP = new Date().toISOString().slice(0, 10);
@@ -23,59 +28,161 @@ function esc(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
+function countLines(fp) {
+  return read(fp).split("\n").length;
+}
+
+/** C 소스에서 함수 본문 추출. maxLines=0 이면 끝까지(생략 없음) */
+function extractFunctionBody(source, funcName, maxLines = 0) {
+  const patterns = [
+    new RegExp(`^[\\t ]*(?:void|INT\\w+U?)\\s+${funcName}\\s*\\(`, "m"),
+    new RegExp(`^[\\t ]*static\\s+(?:void|INT\\w+U?)\\s+${funcName}\\s*\\(`, "m"),
+  ];
+  let idx = -1;
+  for (const re of patterns) {
+    idx = source.search(re);
+    if (idx >= 0) break;
+  }
+  if (idx < 0) return `/* ${funcName} — 소스에서 찾을 수 없음 */`;
+  const lines = source.slice(idx).split("\n");
+  let depth = 0;
+  let started = false;
+  const out = [];
+  for (const line of lines) {
+    out.push(line);
+    for (const ch of line) {
+      if (ch === "{") {
+        depth++;
+        started = true;
+      } else if (ch === "}") depth--;
+    }
+    if (started && depth === 0) break;
+    if (maxLines > 0 && out.length >= maxLines) {
+      out.push("/* ... 이후 생략 (함수가 매우 김) */");
+      break;
+    }
+  }
+  return out.join("\n");
+}
 
 function parseRunSeq(text) {
   const items = [];
   const start = text.indexOf("enum enumSRM_RUN_SEQ");
   if (start < 0) return items;
-  const body = text.slice(start);
-  const end = body.indexOf("};");
-  const block = body.slice(0, end);
+  const block = text.slice(start, text.indexOf("};", start));
   for (const line of block.split("\n")) {
     const m = line.match(/^\s*(RUN_SEQ_\w+)(?:\s*=\s*(\d+))?\s*(?:,\s*(?:\/\/(.*))?)?$/);
-    if (!m) continue;
-    items.push({ name: m[1], val: m[2] || "", comment: (m[3] || "").trim() });
+    if (m) items.push({ name: m[1], val: m[2] || "", comment: (m[3] || "").trim() });
   }
   return items;
 }
 
-function countLines(fp) {
-  return read(fp).split("\n").length;
+/** dev_SRM.c 모든 case RUN_SEQ_* 추출 */
+function extractRunCases(text) {
+  const lines = text.split("\n");
+  const cases = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s*case\s+(RUN_SEQ_\w+)\s*:/);
+    if (!m) continue;
+    const name = m[1];
+    const snippet = [];
+    const saves = [];
+    const stores = [];
+    const errors = [];
+    const transitions = [];
+    for (let j = i; j < lines.length; j++) {
+      const ln = lines[j];
+      snippet.push(ln);
+      const tm = ln.match(/SRM_RunMode\s*=\s*(RUN_SEQ_\w+)/);
+      if (tm) transitions.push(tm[1]);
+      if (/Save_Fork|Save_ForkMove/.test(ln)) saves.push(ln.trim());
+      if (/Store_Work|Store_Fork/.test(ln)) stores.push(ln.trim());
+      if (/save_error_code/.test(ln)) errors.push(ln.trim());
+      if (/^\s*break\s*;/.test(ln) && j > i) break;
+      if (j > i && /^\s*case\s+RUN_SEQ_/.test(ln)) break;
+    }
+    cases.push({
+      name,
+      line: i + 1,
+      snippet: snippet.join("\n"),
+      transitions: [...new Set(transitions)],
+      saves,
+      stores,
+      errors,
+    });
+  }
+  return cases;
 }
 
-function grepCount(symbol, file) {
-  const re = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
-  return (read(file).match(re) || []).length;
+/** 누가 이 RunMode로 점프하는지 (전 파일 grep) */
+function findIncomingTransitions(text, targetCase) {
+  const incoming = [];
+  const lines = text.split("\n");
+  const re = new RegExp(`SRM_RunMode\\s*=\\s*${targetCase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  for (let i = 0; i < lines.length; i++) {
+    if (re.test(lines[i])) {
+      let ctx = "";
+      for (let j = Math.max(0, i - 15); j <= i; j++) {
+        const cm = lines[j].match(/case\s+(RUN_SEQ_\w+)/);
+        if (cm) ctx = cm[1];
+      }
+      incoming.push({ line: i + 1, from: ctx || "(함수/초기화)", code: lines[i].trim() });
+    }
+  }
+  return incoming;
 }
 
-const FILE_ROLES = {
-  "main.c": { tier: 1, role: "부트·HAL·main 루프", desc: "전역변수 정의, 타이머 ISR, while(1)에서 Manager들 호출" },
-  "dev_SRM.c": { tier: 1, role: "SRM 제어 본체", desc: "상태머신 SRM_Machine_Run_Process(), 축 제어, 작업 실행" },
-  "com_tml.c": { tier: 1, role: "지상반 TML 통신", desc: "0x41 작업명령, 0x50 Start, 0x30 상태 응답" },
-  "alarm.c": { tier: 1, role: "상태 기록·DI/DO", desc: "Save_* → m_St/BKPSRAM, DI 채터링, 에러 저장" },
-  "SRM_Parameter.c": { tier: 2, role: "파라미터 Flash", desc: "m_ExtSEnv0~2 읽기/쓰기, 셀·랙·스테이션 설정" },
-  "ecat_main.c": { tier: 2, role: "EtherCAT 마스터", desc: "인버터 PDO 송수신, m_SRM_TxPDO/RxPDO" },
-  "encoder.c": { tier: 2, role: "엔코더", desc: "위치 피드백 PDO" },
-  "rtc.c": { tier: 2, role: "BKPSRAM", desc: "정전 복구 데이터 saveBKSramBlock()" },
-  "com_hmi.c": { tier: 2, role: "HMI Modbus", desc: "MW 레지스터 ↔ m_St 비트맵" },
-  "com_udp.c": { tier: 3, role: "UDP 통신", desc: "이더넷 보조 통신" },
-  "fpga.c": { tier: 3, role: "FPGA", desc: "FPGA 레지스터, TCP 스택 연동" },
-  "upgrade.c": { tier: 3, role: "펌웨어 다운로드", desc: "TY_DOWNLOAD_* 처리" },
-  "Mcu_Test.c": { tier: 3, role: "MCU 자가진단", desc: "m_McuTestCtr/St" },
-};
+function extractTmlHandlers(text) {
+  const handlers = [];
+  const re = /case\s+(TY_\w+)\s*:\s*(?:\/\*.*?\*\/)?\s*(?:rx\w+\([^)]*\)|break)/g;
+  let m;
+  const seen = new Set();
+  while ((m = re.exec(text))) {
+    const ty = m[1];
+    const line = text.slice(0, m.index).split("\n").length;
+    const full = text.slice(m.index, m.index + 120).split("\n")[0];
+    const fn = full.match(/(rx\w+)\s*\(/)?.[1] || "—";
+    if (!seen.has(ty + fn)) {
+      seen.add(ty + fn);
+      handlers.push({ ty, fn, line });
+    }
+  }
+  // simpler line-based
+  const out = [];
+  const seen2 = new Set();
+  for (const line of text.split("\n")) {
+    const m2 = line.match(/case\s+(TY_\w+).*?(rx\w+)\s*\(/);
+    if (m2 && !seen2.has(m2[1])) {
+      seen2.add(m2[1]);
+      out.push({ ty: m2[1], fn: m2[2] });
+    }
+  }
+  return out.length ? out : handlers;
+}
+
+function extractSaveFunctions(text) {
+  const fns = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^void\s+(Save_\w+)\s*\(/);
+    if (m) fns.push(m[1]);
+  }
+  return fns;
+}
+
+function extractStoreFunctions(text) {
+  const fns = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^static void\s+(Store_\w+)\s*\(/);
+    if (m) fns.push({ name: m[1], line: text.split("\n").indexOf(line) + 1 });
+  }
+  return fns;
+}
 
 const RUN_GROUPS = [
-  {
-    id: "standby",
-    title: "대기·시작",
-    color: "#e8f4ec",
-    members: ["RUN_SEQ_STAND_BY", "RUN_SEQ_START"],
-    desc: "지상반 0x50 Start 수신 전 대기. Start 후 작업 분석 시작.",
-  },
+  { id: "standby", title: "0. 대기·시작", members: ["RUN_SEQ_STAND_BY", "RUN_SEQ_START"] },
   {
     id: "prepare",
-    title: "이동 준비 (주행·승강)",
-    color: "#fff8e6",
+    title: "1. 이동 준비·주행승강",
     members: [
       "RUN_SEQ_PREPARE_MOVE_0",
       "RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0",
@@ -86,15 +193,13 @@ const RUN_GROUPS = [
       "RUN_SEQ_TRAV_LIFT_MOVING",
       "RUN_SEQ_TRAV_LIFT_STABILZATION_TIME",
       "RUN_SEQ_TRAV_LIFT_AFTER_MOVE",
+      "RUN_SEQ_FORK_START",
     ],
-    desc: "InPosition 판단, 브레이크 해제, 딜레이, 주행·승강 이동, 안정화.",
   },
   {
     id: "loading",
-    title: "적재 (GET)",
-    color: "#e6f0ff",
+    title: "2. 적재 GET",
     members: [
-      "RUN_SEQ_FORK_START",
       "RUN_SEQ_LOADING_START",
       "RUN_SEQ_LOADING_INTERLOCK",
       "RUN_SEQ_LOADING_INTERLOCK_NO_USE",
@@ -109,12 +214,10 @@ const RUN_GROUPS = [
       "RUN_SEQ_LOADING_AFTER_FORK_IN",
       "RUN_SEQ_LOADING_COMPLETE",
     ],
-    desc: "인터록 → 포크 진출 → 리프트 업 → 포크 복귀 → 화물 확인.",
   },
   {
     id: "unloading",
-    title: "이재 (PUT)",
-    color: "#f0e6ff",
+    title: "3. 이재 PUT",
     members: [
       "RUN_SEQ_UNLOADING_START",
       "RUN_SEQ_UNLOADING_INTERLOCK",
@@ -129,19 +232,11 @@ const RUN_GROUPS = [
       "RUN_SEQ_UNLOADING_AFTER_FORK_IN",
       "RUN_SEQ_UNLOADING_COMPLETE",
     ],
-    desc: "인터록 → 포크 진출 → 리프트 다운 → 포크 복귀 → 공출고 확인.",
   },
-  {
-    id: "complete",
-    title: "완료·PLC",
-    color: "#e8ffe8",
-    members: ["RUN_SEQ_COMPLETE", "RUN_SEQ_PLC_COM_0", "RUN_SEQ_PLC_COM_1", "RUN_SEQ_PLC_COM_2", "RUN_SEQ_PLC_COM_3"],
-    desc: "작업 완료 보고, PLC 연동 통신.",
-  },
+  { id: "complete", title: "4. 완료·PLC", members: ["RUN_SEQ_COMPLETE", "RUN_SEQ_PLC_COM_0", "RUN_SEQ_PLC_COM_1", "RUN_SEQ_PLC_COM_2", "RUN_SEQ_PLC_COM_3"] },
   {
     id: "error",
-    title: "에러 정지",
-    color: "#ffe6e6",
+    title: "5. 에러 정지",
     members: [
       "RUN_SEQ_ERROR_FORK_STOP",
       "RUN_SEQ_ERROR_TRAV_LIFF_STOP",
@@ -149,12 +244,10 @@ const RUN_GROUPS = [
       "RUN_SEQ_ERROR_TRAV_LIFT_STOP_2",
       "RUN_SEQ_ERROR_TRAV_LIFT_STOP_3",
     ],
-    desc: "축별 정지, 브레이크 체결, 속도 0 확인 후 에러 상태 유지.",
   },
   {
     id: "origin",
-    title: "원점·설정",
-    color: "#f5f5f5",
+    title: "6. 원점·설정",
     members: [
       "RUN_SEQ_FORK_ORIGIN_0",
       "RUN_SEQ_FORK_ORIGIN_1",
@@ -168,12 +261,10 @@ const RUN_GROUPS = [
       "RUN_SEQ_SET_AUTO_RACK_1",
       "RUN_SEQ_SET_AUTO_RACK_STOP",
     ],
-    desc: "축별 원점 설정, 수평 설정, 자동 랙 설정.",
   },
   {
     id: "home",
-    title: "홈복귀",
-    color: "#fff0e6",
+    title: "7. 홈복귀",
     members: [
       "RUN_SEQ_RETURN_HOME_0",
       "RUN_SEQ_RETURN_HOME_0_1",
@@ -183,876 +274,676 @@ const RUN_GROUPS = [
       "RUN_SEQ_RETURN_HOME_3",
       "RUN_SEQ_RETURN_HOME_4",
     ],
-    desc: "에러/완료 후 홈 위치 복귀. 브레이크 해제 확인 포함.",
-  },
-  {
-    id: "misc",
-    title: "수동·시험·스캔",
-    color: "#f0f0f0",
-    members: [
-      "RUN_SEQ_MANUAL_MOVE",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_0",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_1",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_2",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_3",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_4",
-      "RUN_SEQ_FORK_PUT_MOVE_ST_5",
-      "RUN_SEQ_FORK1_CHECK_CENTER_0",
-      "RUN_SEQ_FORK1_CHECK_CENTER_1",
-      "RUN_SEQ_FORK2_CHECK_CENTER_0",
-      "RUN_SEQ_FORK2_CHECK_CENTER_1",
-      "RUN_SEQ_FORK_ERROR_CENTER",
-      "RUN_SEQ_FORK_TEST_0",
-      "RUN_SEQ_FORK_TEST_1",
-      "RUN_SEQ_FORK_TEST_2",
-      "RUN_SEQ_FORK_TEST_3",
-      "RUN_SEQ_FORK_TEST_4",
-      "RUN_SEQ_TRAV_SCAN_SENSOR_0",
-      "RUN_SEQ_TRAV_SCAN_SENSOR_1",
-      "RUN_SEQ_TRAV_SCAN_SENSOR_STOP",
-      "RUN_SEQ_LIFT_SCAN_SENSOR_0",
-      "RUN_SEQ_LIFT_SCAN_SENSOR_1",
-      "RUN_SEQ_LIFT_SCAN_SENSOR_STOP",
-      "RUN_SEQ_FORK_SCAN_SENSOR_0",
-      "RUN_SEQ_FORK_SCAN_SENSOR_1",
-      "RUN_SEQ_FORK_SCAN_SENSOR_STOP",
-    ],
-    desc: "수동 이동, 포크 센터 확인, 센서 스캔, 시험 모드.",
   },
 ];
 
-const PATTERNS = [
-  {
-    title: "RunMode case (상태머신 한 스텝)",
-    file: "dev_SRM.c",
-    code: `case RUN_SEQ_XXX:
-    if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) > DELAY_MS)
-    {
-        // 조건 검사
-        if (조건_OK)
-            m_pgmEnv.SRM_RunMode = RUN_SEQ_다음;
-        else
-            save_error_code(ERROR1_*, sub, nFlag);
-    }
-    break;`,
-    explain:
-      "모든 자동 시퀀스의 기본 뼈대. SRM_RunTimer로 경과시간 측정, 조건 만족 시 RunMode만 바꿔 다음 case로 넘김. break 필수.",
-  },
-  {
-    title: "비트 플래그 nFlag (축/센서 상태 묶음)",
-    file: "main.c cbits[]",
-    code: `nFlag = 0;
+const LOADING_FLOW = [
+  { step: 1, run: "RUN_SEQ_PREPARE_MOVE_0", do: "화물검증, InPosition, StartPos/TargetPos 계산", save: "Save_ForkWork_OrderProcess(MOVING_FROM)" },
+  { step: 2, run: "RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0", do: "주행·승강 브레이크 해제 확인 (nFlag 0x03)", save: "—" },
+  { step: 3, run: "RUN_SEQ_MOVE_BEFORE_DELAY", do: "Read_DelayTime(PREFORE_MOVE) 대기", save: "—" },
+  { step: 4, run: "RUN_SEQ_START_MOVE_0", do: "Auto_Ctr_Travel/Lift 명령", save: "—" },
+  { step: 5, run: "RUN_SEQ_TRAV_LIFT_MOVING", do: "이동 중, 도착/InPosition 검사", save: "MOVING_FROM/TO" },
+  { step: 6, run: "RUN_SEQ_TRAV_LIFT_AFTER_MOVE", do: "이동 후 안정화", save: "ARRIVED_FROM" },
+  { step: 7, run: "RUN_SEQ_LOADING_INTERLOCK", do: "스테이션 CV 인터록", save: "—" },
+  { step: 8, run: "RUN_SEQ_LOADING_PRE_FORK_OUT", do: "포크 진출 전 딜레이", save: "PRE_OUT" },
+  { step: 9, run: "RUN_SEQ_LOADING_FORK_OUT", do: "m_Fork_Sub_Run_Step 포크 진출", save: "FORK_OUT" },
+  { step: 10, run: "RUN_SEQ_LOADING_FORK_OUT_LIFT_UP", do: "리프트 업", save: "LIFT_UP" },
+  { step: 11, run: "RUN_SEQ_LOADING_FORK_IN", do: "포크 복귀(센터)", save: "FORK_IN" },
+  { step: 12, run: "RUN_SEQ_LOADING_COMPLETE", do: "GOX 화물센서 확인", save: "WORK_STATUS_COMPLETE" },
+];
+
+function buildThreeLayersDeep() {
+  return `
+<h2 id="layers">Part A — 데이터 3층 (완전 해설)</h2>
+<div class="warn"><b>주의</b>: 아래 3층은 <b>동시에 한 줄로 흐르는 파이프가 아닙니다</b>.
+<b>역할(책임) 분리 + 시간축</b>입니다. 0x41 시점에 입력·출력이 <b>겹치기도</b> 합니다.</div>
+
+<h3 id="layers-roles">A.1 세 층의 역할</h3>
+<table class="data-table">
+<tr><th>층</th><th>한 줄</th><th>주요 변수</th><th>비유</th></tr>
+<tr><td><b>입력층</b></td><td>지상반 명령 → 실행 <b>레시피</b> 작성</td><td>WorkCmdSTR → m_WorkData[]</td><td>주문서 → 조리 지시서</td></tr>
+<tr><td><b>실행층</b></td><td>레시피 보고 모터·시퀀스 구동</td><td>SRM_RunMode, Sub_Run_Step, s_WorkInx</td><td>주방 조리</td></tr>
+<tr><td><b>출력층</b></td><td>지상반에 진행·에러 <b>보고</b></td><td>m_St → 0x30, m_BKSram.AlarmLog</td><td>진행률 표시</td></tr>
+</table>
+
+<h3 id="layers-time">A.2 시간순 — GET 1건 전체 (T0→Tn)</h3>
+<div class="flow-box"><pre class="flow-pre">[T0] 0x41 TY_CMD_ORDER ─────────────────── 입력층
+     com_tml.c  rxCmdOrder()                    (약 2340행)
+       ├─ 검증: STAND_BY? Auto? Fault? ForkCenter?
+       └─ SRM_Fork_Work_Cmd(pCmd)               dev_SRM.c 약 45936행
+            ├─ Store_Work_Data_1()  → m_WorkData[0],[1]…  ★ 실행 레시피
+            └─ Store_Fork_WorkStatus() → m_St.ForkWork[]  ★ 지상반 1차 기록
+     ※ 이 시점: 모터 안 움. RunMode = STAND_BY
+
+[T1] 0x50 TY_CMD_START ─────────────────── 입력→실행 연결
+     rxCmdStart() → SRM_Start_On()           (46806행)
+       ├─ m_St.SRM_Status1.StartOn = 1
+       └─ m_pgmEnv.SRM_RunMode = RUN_SEQ_START
+
+[T2] 매 while(1) ───────────────────────── 실행층 (super loop)
+     main.c → SRM_Manager() → SRM_Machine_Run_Process()  (58437행)
+       switch(SRM_RunMode) — case 한 스텝만 실행 후 break
+       ├─ m_WorkData[s_WorkInx] 읽음 (TargetPos, ForkAct…)
+       ├─ Motor_Brake / Auto_Ctr_Travel / Auto_Ctr_Lift
+       └─ Save_ForkWork_OrderProcess()  ────── 출력층 갱신
+
+[T3] 0x30 TY_STATUS_REQ (주기 폴링) ───── 출력층 읽기
+     rxStatusReq() → m_St 패킷 응답
+     Save가 바꿔둔 OrderProcess/Status가 지상반 화면에 표시</pre></div>
+
+<h3 id="layers-vars">A.3 층별 디버깅 — 무엇을 보나</h3>
+<table class="data-table">
+<tr><th>궁금한 것</th><th>볼 변수/함수</th><th>파일</th></tr>
+<tr><td>명령 받았나?</td><td>m_St.ForkWork[0].WorkNum_Fork, OrderProcess=CMD_FORK_STEP_RX</td><td>Store_Fork_WorkStatus</td></tr>
+<tr><td>뭘 실행하나?</td><td>m_WorkData[0].ForkAct, TargetPos, DrvData[]</td><td>dev_SRM.c static</td></tr>
+<tr><td>지금 어느 단계?</td><td>m_pgmEnv.SRM_RunMode</td><td>enumSRM_RUN_SEQ</td></tr>
+<tr><td>지상반 스텝?</td><td>m_St.ForkWork[0].OrderProcess_Fork</td><td>Save_ForkWork_*</td></tr>
+<tr><td>에러?</td><td>m_St.Fault, save_error_code, AlarmLog</td><td>alarm.c</td></tr>
+</table>
+
+<h3 id="store-save">A.4 Store_* vs Save_* (이름 같아서 지옥)</h3>
+<table class="data-table">
+<tr><th></th><th>Store_*</th><th>Save_*</th></tr>
+<tr><td><b>시점</b></td><td>주로 0x41 (SRM_Fork_Work_Cmd)</td><td>실행 중 RunMode case</td></tr>
+<tr><td><b>m_WorkData</b></td><td>✅ 채움 (TargetPos, ForkAct…)</td><td>❌ 거의 안 씀</td></tr>
+<tr><td><b>m_St</b></td><td>✅ Store_Fork_WorkStatus도 m_St 씀</td><td>✅ 스텝/상태 갱신</td></tr>
+<tr><td><b>BKPSRAM</b></td><td>일부</td><td>✅ saveBKSramBlock</td></tr>
+<tr><td><b>의미</b></td><td>명령 접수 + 실행 큐</td><td>돌면서 진행 보고</td></tr>
+</table>
+
+<h3 id="layers-diagram">A.5 수정된 흐름도 (겹침 표시)</h3>
+<div class="flow-box"><pre class="flow-pre">지상반                         MCU
+──────                         ───
+
+0x41 ──► rxCmdOrder
+           └─► Store ──► m_WorkData (실행 레시피)
+           └─► Store_Fork_WorkStatus ──► m_St (작업번호·RX)  ← 입력+출력 겹침
+
+         (대기: StartOn=0, RunMode=STAND_BY)
+
+0x50 ──► SRM_Start_On ──► RunMode=START
+                              │
+                              ▼
+                    SRM_Machine_Run_Process (매 루프)
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+         m_WorkData      인버터/EtherCAT    Save_* → m_St
+                                              │
+0x30 ◄────────────────────────────────────────┘ 폴링</pre></div>
+
+<h3 id="mpgmenv-mst">A.6 m_pgmEnv vs m_St</h3>
+<p><b>m_pgmEnv</b> (PGMEnvSTR): MCU 내부 전용. SRM_RunMode, timer1ms, 통신 링크, 내부 플래그.
+지상반 0x30에 <b>직접 안 나감</b>.</p>
+<p><b>m_St</b> (StatusSTR): 지상반 "얼굴". ForkWork[], Inv_St[], DI/DO, Fault.
+<b>Save_*</b>가 여기 씀 → 0x30 폴링.</p>
+<p><b>m_WorkData</b>: dev_SRM.c <code>static SRM_WorkDataSTR m_WorkData[30]</code> — extern 아님.
+상태머신만 접근하는 <b>실행 큐</b>.</p>
+`;
+}
+
+function buildRxCmdOrderDeep() {
+  return `
+<h2 id="rx41">Part B — 0x41 rxCmdOrder() 완전 추적</h2>
+<p><b>파일</b>: com_tml.c 약 <code>2340</code>행 <code>void rxCmdOrder()</code></p>
+
+<h3>B.1 진입 ~ 검증 (거부 사유)</h3>
+<ol>
+<li><code>pCmd = (WorkCmdSTR*)&amp;pCom-&gt;Data[0]</code> — 패킷 → 구조체</li>
+<li>Fault → COMMAND_ERROR_FALUT_STATE</li>
+<li>ManualSW → COMMAND_ERROR_MANUAL_SW_ON</li>
+<li><code>SRM_RunMode != RUN_SEQ_STAND_BY</code> → 이전 명령 실행 중</li>
+<li><code>Check_Fork_Center_Alarm()</code> → 포크 센터 이탈</li>
+<li>Auto==0 → 수동 모드</li>
+<li>GET/PUT 시 StartOn==0 → NON_ONLINE (온라인 아님)</li>
+<li>GoodsFlag 검사 (DISABLE_ERROR_CARRIER_GOODS_SENSOR로 생략 가능)</li>
+<li>CheckCmdCellPosition, 금지랙, 스페셜랙</li>
+</ol>
+
+<h3>B.2 수락 시 — SRM_Fork_Work_Cmd()</h3>
+<p><code>ret_value[0] = SRM_Fork_Work_Cmd(pCmd)</code> — dev_SRM.c 약 45936행</p>
+<ul>
+<li>OrderCode별 From/To 좌표 → TravPos/LiftPos 계산</li>
+<li><code>Store_Work_Data_1()</code> — GET+PUT면 m_WorkData에 2슬롯 (From GET, To PUT)</li>
+<li><code>Store_Fork_WorkStatus()</code> — m_St.ForkWork[0]에 WorkNum, OrderCode, RX 스텝</li>
+<li>Store_Work_Data 내부에서 From_Cell/To_Cell을 m_St에 memcpy하기도 함</li>
+</ul>
+
+<h3>B.3 0x41 직후 상태</h3>
+<table class="data-table">
+<tr><th>항목</th><th>값</th></tr>
+<tr><td>RunMode</td><td>STAND_BY (아직 Start 전)</td></tr>
+<tr><td>m_WorkData</td><td>채워짐 (실행 대기)</td></tr>
+<tr><td>m_St.ForkWork</td><td>WorkNum, OrderCode, OrderProcess=RX</td></tr>
+<tr><td>모터</td><td>안 움</td></tr>
+</table>
+`;
+}
+
+function buildStartOnDeep() {
+  return `
+<h2 id="rx50">Part C — 0x50 Start / SRM_Start_On()</h2>
+<p><code>rxCmdStart()</code> com_tml.c 2825행 → <code>SRM_Start_On()</code> dev_SRM.c 46806행</p>
+
+<h3>C.1 Start 거부 조건</h3>
+<ul>
+<li>OrderRejectCondition (비상/안전플러그)</li>
+<li>Fault, !Auto</li>
+<li>이미 StartOn==1 (NON_ONLINE)</li>
+<li>포크 센터 이탈</li>
+<li>RunMode != STAND_BY</li>
+</ul>
+
+<h3>C.2 Start 성공 시</h3>
+<ul>
+<li><code>m_St.SRM_Status1.Bit.StartOn = 1</code></li>
+<li><code>m_pgmEnv.SRM_RunMode = RUN_SEQ_START</code> (47431행 근처)</li>
+<li>WorkInfo → BKPSRAM 저장</li>
+</ul>
+
+<h3>C.3 RUN_SEQ_START case (58792행~)</h3>
+<ul>
+<li><code>s_WorkInx = 0</code> (또는 TaskMode면 SRM_TaskIndex)</li>
+<li>스테이션/Row_ID → Move_PosFlag 설정</li>
+<li><code>m_WorkData[s_WorkInx].ForkAct</code>에 따라 PREPARE / LOADING_START / UNLOADING_START 분기</li>
+</ul>
+`;
+}
+
+function buildMainLoopDeep() {
+  return `
+<h2 id="mainloop">Part D — main 루프 · Manager · 타이머</h2>
+<pre class="code">// main.c while(1) — 협력적 super loop (RTOS 아님)
+AlarmManager();       // DI/DO, 에러
+TMLComManager();      // ★ UART 수신 → rxCmdOrder/Start/Status
+ECAT_Manager();       // ★ 인버터 PDO
+SRM_Manager();        // ★ SRM_Machine_Run_Process()
+
+// 1ms ISR (main.c)
+m_pgmEnv.timer1ms++;  // 모든 getCalcTimer1ms()의 시계</pre>
+
+<h3>D.1 SRM_Manager() (67918행)</h3>
+<ol>
+<li>Scan_Digital_Input_Chattering()</li>
+<li>SRM_Machine_Process() — SSR/연결</li>
+<li><b>SRM_Machine_Run_Process()</b> — 상태머신 본체</li>
+<li>HMI_ModbusTCP_Proc()</li>
+</ol>
+
+<h3>D.2 SRM_Machine_Run_Process() static 변수 (58463행~)</h3>
+<table class="data-table">
+<tr><th>변수</th><th>역할</th></tr>
+<tr><td>s_WorkInx</td><td>현재 m_WorkData 인덱스</td></tr>
+<tr><td>s_Work_Fork_Flag</td><td>포크1/2 동시 작업 비트</td></tr>
+<tr><td>s_No_movement</td><td>주행·승강 스킵, 포크만</td></tr>
+<tr><td>s_Delay_Time</td><td>Read_DelayTime() 결과 ms</td></tr>
+<tr><td>s_Brake_Release_Retry</td><td>브레이크 해제 재시도</td></tr>
+</table>
+`;
+}
+
+function buildPrepareMoveDeep() {
+  return `
+<h2 id="prepare-deep">Part E — PREPARE_MOVE · 브레이크 해제 (상세)</h2>
+
+<h3>E.1 RUN_SEQ_PREPARE_MOVE_0</h3>
+<ol>
+<li><code>Check_Trav_lift_In_Postion(s_WorkInx)</code> — 목표 도착?</li>
+<li><code>Rack_fork_obstruction != 0</code> — InPosition이어도 재이동 (WCS 스킵 방지)</li>
+<li>이동 필요: StartPos←Current_Pos, Move_Dir←Check_Trav/Lift_Move_Dir</li>
+<li><code>Save_ForkWork_OrderProcess(MOVING_FROM/TO)</code></li>
+<li>ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE → BRAKE_RELEASE_0 else MOVE_BEFORE_DELAY</li>
+</ol>
+
+<h3>E.2 RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</h3>
+<pre class="code">nFlag = 0;
 if (Get_Motor_Brake_Release(INV_TRAVEL))  nFlag |= cbits[0]; // bit0=주행
 if (Get_Motor_Brake_Release(INV_HOIST))     nFlag |= cbits[1]; // bit1=승강
-// 0x00=둘다미해제, 0x01=주행만, 0x02=승강만, 0x03=둘다해제
-save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag); // 서브코드로 전달`,
-    explain:
-      "여러 축 상태를 한 바이트에 담아 에러 서브코드로 넘김. cbits[n]=1<<n. negative/방향과 무관.",
-  },
-  {
-    title: "Store_* vs Save_*",
-    file: "dev_SRM.c / alarm.c",
-    code: `// Store: 내부 작업 큐 적재 (지상반에 안 나감)
-Store_Work_Data_1(...);  // → m_WorkData[s_WorkInx]
+// nFlag: 0x00=둘다미해제, 0x01=주행, 0x02=승강, 0x03=둘다해제
+// 3초 내 nFlag==0x03 → MOVE_BEFORE_DELAY
+// 타임아웃 → save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag)</pre>
+<p><code>Get_Motor_Brake_Release</code> 1124행: 1=Brake Off(해제), 0=Brake On</p>
+`;
+}
 
-// Save: 지상반 보고용 상태 기록 (0x30 폴링으로 읽힘)
-Save_ForkWork_OrderProcess(0, CMD_FORK_STEP_MOVING_FROM);`,
-    explain:
-      "Store=실행 데이터 준비, Save=WCS에 보여줄 진행상태. 혼동하면 디버깅 지옥.",
-  },
-  {
-    title: "타이머 패턴",
-    file: "전역",
-    code: `m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;  // 시작 시각 기록
-// ... 나중에 case 안에서:
-if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) > 3000) { ... }`,
-    explain:
-      "timer1ms는 1ms ISR에서 증가. getCalcTimer1ms는 오버플로 안전 경과시간. 모든 딜레이/타임아웃의 기반.",
-  },
-  {
-    title: "서브 시퀀스 (축별)",
-    file: "dev_SRM.c",
-    code: `m_Trav_Sub_Run_Step = 10;   // 주행 서브스텝
-m_Lift_Sub_Run_Step = 20;    // 승강 서브스텝
-m_Fork_Sub_Run_Step = 30;    // 포크 서브스텝`,
-    explain:
-      "RunMode는 큰 흐름, Sub_Run_Step은 한 축의 세부 제어(가속/감속/정위치). 이중 상태머신 구조.",
-  },
-  {
-    title: "인버터 제어 호출",
-    file: "dev_SRM.c",
-    code: `Motor_Brake_Release(INV_TRAVEL);     // 브레이크 해제 명령
-Get_Motor_Brake_Release(INV_TRAVEL);     // 1=해제됨, 0=걸림
-Auto_Ctr_Travel(TargetPos, Speed);     // 자동 위치 제어
-Motor_Application_Stop(INV_TRAVEL, vel);`,
-    explain:
-      "EtherCAT PDO를 통해 SEW/MOVI 인버터 제어. Vendor별 분기는 Get_Motor_Brake_Release 안에 캡슐화.",
-  },
-];
-
-const NAMING_TRAPS = [
-  {
-    name: "GoodsFlag_Or_MoveHome",
-    trap: "이름은 '화물 OR 홈이동' 같지만 축마다 의미 다름",
-    real: "포크=화물유무, 주행/승강=홈복귀중 플래그. 반드시 축(INV_*) 맥락에서 읽을 것.",
-  },
-  {
-    name: "Rack_fork_obstruction",
-    trap: "랙-포크 물리적 간섭 센서 같음",
-    real: "WCS가 '이미 InPosition'이라 스킵하려 할 때 MCU가 '그래도 이동해야 함' 표시. 1이면 InPosition이어도 재이동.",
-  },
-  {
-    name: "ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE",
-    trap: "좌측 이동 시에만 브레이크 해제",
-    real: "컴파일 옵션(0/1). 주행+승강 이동 전 브레이크 해제 확인 서브시퀀스 on/off. LEFT는 레거시 네이밍.",
-  },
-  {
-    name: "Save_* vs Store_*",
-    trap: "둘 다 '저장' 같음",
-    real: "Save=m_St 지상반 보고, Store=m_WorkData 내부 큐.",
-  },
-  {
-    name: "SRM_TaskMode / 0x40",
-    trap: "RunMode와 같은 것",
-    real: "0x40 Task Order 전용. 일반 0x41 작업과 별도 경로.",
-  },
-  {
-    name: "RETURN_HOME vs ORIGIN",
-    trap: "둘 다 홈",
-    real: "ORIGIN=축 원점 설정(기준점 잡기), RETURN_HOME=운전 중 홈 위치로 복귀.",
-  },
-  {
-    name: "TRAV_MOVE_FORWARD / REVERSE",
-    trap: "좌/우 방향",
-    real: "엔코더 좌표 기준 TargetPos > StartPos면 FORWARD. 현장 좌/우는 파라미터·설치 방향에 따름.",
-  },
-  {
-    name: "m_pgmEnv vs m_St",
-    trap: "둘 다 상태",
-    real: "m_pgmEnv=MCU 내부( RunMode, 타이머, 통신링크). m_St=지상반에 보여주는 얼굴.",
-  },
-];
-
-const EXERCISES = [
-  { q: "지상반 작업명령(0x41)을 처음 받는 함수는?", a: "com_tml.c → rxCmdOrder()", hint: "TY_CMD_ORDER case" },
-  { q: "0x50 Start를 받으면 RunMode가 어디로 바뀌나?", a: "RUN_SEQ_START (com_tml.c rxCmdStart)", hint: "SRM_RunMode =" },
-  { q: "실제 이번 사이클 작업 데이터는 어디에?", a: "dev_SRM.c static m_WorkData[30]", hint: "Store_Work_Data" },
-  { q: "지상반 0x30 폴링으로 읽는 상태 구조체는?", a: "m_St (StatusSTR)", hint: "TY_STATUS_REQ" },
-  { q: "상태머신 본체 함수는?", a: "SRM_Machine_Run_Process() in dev_SRM.c", hint: "switch(m_pgmEnv.SRM_RunMode)" },
-  { q: "RunMode enum 정의 헤더는?", a: "dev_SRM.h → enumSRM_RUN_SEQ", hint: "RUN_SEQ_STAND_BY" },
-  { q: "에러 코드 ERROR1_* 정의 헤더는?", a: "error_code.h", hint: "save_error_code" },
-  { q: "cbits[0]의 값은?", a: "0x01 (bit0 마스크)", hint: "main.c const INT08U cbits" },
-  { q: "InPosition인데도 주행·승강을 다시 이동시키는 플래그?", a: "m_WorkData[].Rack_fork_obstruction", hint: "PREPARE_MOVE_0" },
-  { q: "정전 복구용 백업 SRAM 미러?", a: "m_BKSram (BKSRamSTR)", hint: "rtc.c saveBKSramBlock" },
-  { q: "주행·승강·포크 파라미터 3분할?", a: "m_ExtSEnv0(주행/랙), m_ExtSEnv1(승강/스테이션), m_ExtSEnv2(포크/제어)", hint: "ExtFlashSEnv" },
-  { q: "main while(1)에서 SRM 제어 진입점?", a: "SRM_Manager() → SRM_Machine_Run_Process()", hint: "main.c 843행 근처" },
-];
-
-function buildRunSeqTable(allRunSeq) {
-  const nameSet = new Map(allRunSeq.map((r) => [r.name, r]));
-  let html = "";
-  for (const g of RUN_GROUPS) {
-    html += `<details class="run-group" open><summary><b>${esc(g.title)}</b> — ${esc(g.desc)}</summary>`;
-    html += `<table class="data-table"><thead><tr><th>RunMode</th><th>값</th><th>주석</th><th>dev_SRM.c case</th></tr></thead><tbody>`;
-    for (const name of g.members) {
-      const r = nameSet.get(name) || { name, val: "", comment: "" };
-      const hasCase = grepCount(name, path.join(SRC, "dev_SRM.c")) > 0;
-      html += `<tr>
-        <td class="mono">${esc(r.name)}</td>
-        <td>${esc(r.val || "auto")}</td>
-        <td>${esc(r.comment || "-")}</td>
-        <td>${hasCase ? "✓ case 있음" : "enum만/간접"}</td>
-      </tr>`;
-    }
-    html += `</tbody></table></details>`;
+function buildLoadingFlowTable() {
+  let html = `<h2 id="get-flow-table">Part F — GET(적재) 단계별 RunMode 표</h2><table class="data-table">
+<tr><th>#</th><th>RunMode</th><th>하는 일</th><th>Save 보고(개요)</th></tr>`;
+  for (const s of LOADING_FLOW) {
+    html += `<tr><td>${s.step}</td><td class="mono">${esc(s.run)}</td><td>${esc(s.do)}</td><td class="mono">${esc(s.save)}</td></tr>`;
   }
-  // ungrouped
+  html += `</table><p>PUT(UNLOADING_*)는 LIFT_UP→LIFT_DOWN 등 대칭. dev_SRM.h enum 50번대.</p>`;
+  return html;
+}
+
+function buildAllRunCaseIndex(runCases, devText, runSeqEnum) {
+  const caseMap = new Map(runCases.map((c) => [c.name, c]));
+  const enumMap = new Map(runSeqEnum.map((r) => [r.name, r]));
+  let html = `<h2 id="runmode-all">Part G — RunMode case 전체 (${runCases.length}개, 코드 추출)</h2>
+<div class="note">각 case 클릭 → dev_SRM.c 소스 일부, 다음 RunMode, Save/에러 호출, <b>누가 이 case로 들어오나</b></div>`;
+
+  for (const g of RUN_GROUPS) {
+    html += `<h3 id="grp-${g.id}">${esc(g.title)}</h3>`;
+    for (const name of g.members) {
+      const c = caseMap.get(name);
+      const en = enumMap.get(name);
+      if (!c) {
+        html += `<details class="case-item"><summary class="mono">${esc(name)}</summary><p>case 본문 없음 (enum만)</p></details>`;
+        continue;
+      }
+      const incoming = findIncomingTransitions(devText, name);
+      html += `<details class="case-item" id="case_${name}">`;
+      html += `<summary><span class="mono">${esc(name)}</span>`;
+      if (en?.comment) html += ` <span class="kind">— ${esc(en.comment)}</span>`;
+      html += ` <span class="kind">dev_SRM.c:${c.line}</span></summary>`;
+
+      if (incoming.length) {
+        html += `<p><b>← 들어오는 전이</b> (${incoming.length}건)</p><ul>`;
+        for (const inc of incoming) {
+          html += `<li>L${inc.line} from <span class="mono">${esc(inc.from)}</span>: <code>${esc(inc.code)}</code></li>`;
+        }
+        html += `</ul>`;
+      }
+      if (c.transitions.length) {
+        html += `<p><b>→ 나가는 전이</b>: ${c.transitions.map((t) => `<span class="mono">${esc(t)}</span>`).join(", ")}</p>`;
+      }
+      if (c.saves.length) html += `<p><b>Save_*</b>: ${c.saves.map((s) => `<code>${esc(s)}</code>`).join("<br>")}</p>`;
+      if (c.errors.length) html += `<p><b>save_error_code</b>: ${c.errors.map((s) => `<code>${esc(s)}</code>`).join("<br>")}</p>`;
+      html += `<pre class="code-sm">${esc(c.snippet)}</pre>`;
+      html += `</details>`;
+    }
+  }
+
+  // ungrouped cases
   const grouped = new Set(RUN_GROUPS.flatMap((g) => g.members));
-  const rest = allRunSeq.filter((r) => !grouped.has(r.name));
+  const rest = runCases.filter((c) => !grouped.has(c.name));
   if (rest.length) {
-    html += `<details class="run-group"><summary><b>기타 RunMode</b> (${rest.length}개)</summary><ul>`;
-    for (const r of rest) html += `<li class="mono">${esc(r.name)}${r.comment ? " — " + esc(r.comment) : ""}</li>`;
-    html += `</ul></details>`;
+    html += `<h3 id="grp-misc">8. 기타 RunMode (${rest.length}개)</h3>`;
+    for (const c of rest) {
+      html += `<details class="case-item"><summary class="mono">${esc(c.name)}</summary>`;
+      html += `<p>L${c.line} → ${c.transitions.map(esc).join(", ") || "—"}</p>`;
+      html += `<pre class="code-sm">${esc(c.snippet)}</pre>`;
+      html += `</details>`;
+    }
   }
   return html;
+}
+
+function buildTmlTable(handlers) {
+  const core = [
+    ["TY_STATUS_REQ (0x30)", "rxStatusReq", "m_St 폴링 응답"],
+    ["TY_CMD_ORDER (0x41)", "rxCmdOrder", "작업명령 → SRM_Fork_Work_Cmd"],
+    ["TY_CMD_START (0x50)", "rxCmdStart", "SRM_Start_On → RUN_SEQ_START"],
+    ["TY_CMD_MOVE_HOME (0x51)", "rxCmd_MoveHome", "홈 이동"],
+    ["TY_CMD_ERROR_RESET (0x52)", "rxCmdErrorReset", "에러 리셋"],
+    ["TY_CMD_ORDER_DELETE (0x53)", "rxCmdOrderDelete", "작업 삭제"],
+    ["TY_EMERGENCY_STOP (0x55)", "rxCmdEmergencyStop", "비상정지"],
+  ];
+  let html = `<h2 id="tml-all">Part H — TML 수신 핸들러</h2>
+<h3>H.1 핵심 7개 (자동운전)</h3><table class="data-table">
+<tr><th>TY_*</th><th>함수</th><th>역할</th></tr>`;
+  for (const [ty, fn, role] of core) {
+    html += `<tr><td>${esc(ty)}</td><td class="mono">${esc(fn)}</td><td>${esc(role)}</td></tr>`;
+  }
+  html += `</table><h3>H.2 전체 (com_tml.c switch, ${handlers.length}개)</h3>
+<details><summary>파라미터·다운로드·시험 포함 전체 목록</summary>
+<table class="data-table"><tr><th>TY_*</th><th>rx 함수</th></tr>`;
+  for (const h of handlers) {
+    html += `<tr><td class="mono">${esc(h.ty)}</td><td class="mono">${esc(h.fn)}</td></tr>`;
+  }
+  html += `</table></details>`;
+  return html;
+}
+
+function buildStoreSaveChapter(stores, saves) {
+  let html = `<h2 id="store-save-fns">Part I — Store_* / Save_* 함수 목록</h2>
+<h3>I.1 Store_* (dev_SRM.c static — 입력/큐)</h3><ul>`;
+  for (const s of stores) html += `<li class="mono">${esc(s.name)} (L${s.line})</li>`;
+  html += `</ul><h3>I.2 Save_* (alarm.c — 출력/보고)</h3><ul>`;
+  for (const s of saves) html += `<li class="mono">${esc(s)}() → m_St + BKPSRAM</li>`;
+  html += `</ul>`;
+  return html;
+}
+
+function buildNav() {
+  return `
+<div class="part">시작</div>
+<a href="#intro">목적·읽는법</a>
+<a href="#curriculum">4주 로드맵</a>
+<a href="#layers">A. 데이터 3층 완전해설</a>
+<a href="#layers-time">A.2 시간순 T0→Tn</a>
+<a href="#store-save">A.4 Store vs Save</a>
+<div class="part">통신·시작</div>
+<a href="#rx41">B. 0x41 rxCmdOrder</a>
+<a href="#rx50">C. 0x50 Start</a>
+<a href="#mainloop">D. main 루프</a>
+<a href="#tml-all">H. TML 핸들러</a>
+<div class="part">상태머신</div>
+<a href="#prepare-deep">E. PREPARE·브레이크</a>
+<a href="#get-flow-table">F. GET 단계표</a>
+<a href="#runmode-all">G. RunMode case 전체</a>
+<a href="#fork-steps">J. 스텝 enum</a>
+<a href="#put-flow">F2. PUT 흐름</a>
+<a href="#files">K. 파일 맵</a>
+<a href="#struct8">L. 8대 구조체</a>
+<div class="part">함수·실전</div>
+<a href="#store-save-fns">I. Store/Save 함수</a>
+<a href="#patterns">코딩 패턴</a>
+<a href="#traps">명명 함정</a>
+<a href="#exercise">연습문제</a>
+<a href="#transfer">타 설비 이식</a>
+<a class="ext" href="SRM_전체심볼_용도사전.html">→ 심볼 사전</a>
+<a class="ext" href="SRM_구조체트리.html">→ 구조체 트리</a>`;
+}
+
+const PATTERNS = [
+  { title: "RunMode case", code: `case RUN_SEQ_XXX:\n  if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) > MS)\n    m_pgmEnv.SRM_RunMode = RUN_SEQ_다음;\n  break;`, explain: "매 루프 1스텝. break 필수." },
+  { title: "nFlag 비트맵", code: `nFlag |= cbits[0]; // bit0\n// 0x03 = 둘 다 OK`, explain: "축 상태를 에러 서브코드로." },
+  { title: "Store vs Save", code: `Store_Work_Data_1(...); // m_WorkData\nSave_ForkWork_OrderProcess(0, STEP); // m_St`, explain: "Store=레시피, Save=보고." },
+  { title: "타이머", code: `m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;\ngetCalcTimer1ms(...) > 3000`, explain: "1ms ISR 기반." },
+];
+
+const TRAPS = [
+  { name: "GoodsFlag_Or_MoveHome", trap: "화물 플래그?", real: "축마다 다름. 포크=화물, 주행/승강=홈복귀." },
+  { name: "Rack_fork_obstruction", trap: "물리 간섭?", real: "InPosition 스킵 방지. 1이면 재이동." },
+  { name: "Store vs Save", trap: "둘 다 저장", real: "Store=큐+접수, Save=진행보고." },
+  { name: "ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE", trap: "좌측 이동?", real: "컴파일 옵션. 주행+승강 브레이크 확인." },
+];
+
+function parseEnumBlock(text, enumName) {
+  const items = [];
+  const start = text.indexOf(`enum ${enumName}`);
+  if (start < 0) return items;
+  const block = text.slice(start, text.indexOf("};", start));
+  for (const line of block.split("\n")) {
+    const m = line.match(/^\s*(\w+)\s*(?:=\s*([^,/]+))?\s*,?\s*(?:\/\/(.*))?$/);
+    if (!m || m[1] === "enum") continue;
+    items.push({ name: m[1], val: (m[2] || "").trim(), comment: (m[3] || "").trim() });
+  }
+  return items;
+}
+
+function buildForkStepTable(forkSteps, workStatus) {
+  let html = `<h2 id="fork-steps">Part J — 지상반 스텝 코드 (OrderProcess)</h2>
+<h3>J.1 WORK_STATUS (작업 결과)</h3><table class="data-table"><tr><th>이름</th><th>값</th></tr>`;
+  for (const w of workStatus.filter((x) => x.name.startsWith("WORK_STATUS"))) {
+    html += `<tr><td class="mono">${esc(w.name)}</td><td>${esc(w.val)}</td></tr>`;
+  }
+  html += `</table><h3>J.2 CMD_FORK_STEP (포크 작업 진행 — Save_ForkWork_OrderProcess 인자)</h3>
+<table class="data-table"><tr><th>enum</th><th>값</th><th>현장 의미(개요)</th></tr>`;
+  const meanings = {
+    CMD_FORK_STEP_RX: "0x41 명령 수신됨",
+    CMD_FORK_STEP_MOVING_FROM: "From 셀 쪽으로 주행·승강 이동 중",
+    CMD_FORK_STEP_ARRIVED_FROM: "From 위치 도착",
+    CMD_FORK_STEP_FORK_OUT_FROM: "From에서 포크 진출",
+    CMD_FORK_STEP_FORK_UP_FROM: "적재 리프트 업",
+    CMD_FORK_STEP_FORK_IN_FROM: "From 후 포크 복귀",
+    CMD_FORK_STEP_MOVING_TO: "To 셀 쪽 이동 중",
+    CMD_FORK_STEP_ARRIVED_TO: "To 위치 도착",
+    CMD_FORK_STEP_FORK_OUT_TO: "To에서 포크 진출",
+    CMD_FORK_STEP_FORK_DOWN_TO: "이재 리프트 다운",
+    CMD_FORK_STEP_FORK_IN_TO: "To 후 포크 복귀",
+    CMD_FORK_STEP_LODADED: "적재 완료(화물 확인)",
+    CMD_FORK_STEP_UNLODADED: "이재 완료",
+  };
+  for (const s of forkSteps) {
+    html += `<tr><td class="mono">${esc(s.name)}</td><td>${esc(s.val || "auto")}</td><td>${esc(meanings[s.name] || s.comment || "—")}</td></tr>`;
+  }
+  html += `</table><p>지상반 화면 "스텝" = <code>m_St.ForkWork[0].OrderProcess_Fork</code> 이 값.</p>`;
+  return html;
+}
+
+function buildPutFlowTable() {
+  const put = [
+    { step: 1, run: "UNLOADING_START", do: "PUT 분기 진입, 화물 있음 검사" },
+    { step: 2, run: "UNLOADING_INTERLOCK", do: "스테이션 인터록" },
+    { step: 3, run: "UNLOADING_PRE_FORK_OUT", do: "포크 진출 전 딜레이" },
+    { step: 4, run: "UNLOADING_FORK_OUT", do: "포크 To 랙 진출" },
+    { step: 5, run: "UNLOADING_FORK_OUT_LIFT_DOWN", do: "리프트 다운(이재)" },
+    { step: 6, run: "UNLOADING_FORK_IN", do: "포크 복귀" },
+    { step: 7, run: "UNLOADING_COMPLETE", do: "공출고/화물 없음 확인" },
+  ];
+  let html = `<h2 id="put-flow">Part F2 — PUT(이재) 단계</h2><table class="data-table"><tr><th>#</th><th>RunMode</th><th>하는 일</th></tr>`;
+  for (const s of put) {
+    html += `<tr><td>${s.step}</td><td class="mono">RUN_SEQ_${esc(s.run)}</td><td>${esc(s.do)}</td></tr>`;
+  }
+  return html + `</table>`;
 }
 
 function buildFileTable() {
-  const files = fs.readdirSync(SRC).filter((f) => f.endsWith(".c")).sort();
-  let html = `<table class="data-table"><thead><tr>
-    <th>우선순위</th><th>파일</th><th>줄수</th><th>역할</th><th>설명</th>
-  </tr></thead><tbody>`;
-  for (const f of files) {
-    const info = FILE_ROLES[f] || { tier: 4, role: "보조/인프라", desc: "HAL, 통신 하위, 유틸" };
-    const tierLabel = info.tier === 1 ? "★★★ 필수" : info.tier === 2 ? "★★ 중요" : info.tier === 3 ? "★ 참고" : "인프라";
-    html += `<tr>
-      <td>${tierLabel}</td>
-      <td class="mono">${esc(f)}</td>
-      <td>${countLines(path.join(SRC, f)).toLocaleString()}</td>
-      <td>${esc(info.role)}</td>
-      <td>${esc(info.desc)}</td>
-    </tr>`;
+  const roles = {
+    "main.c": "부트·HAL·while(1)·timer1ms",
+    "dev_SRM.c": "상태머신·축제어·Store_*",
+    "com_tml.c": "TML 0x30/0x41/0x50",
+    "alarm.c": "Save_*·DI/DO·에러",
+    "SRM_Parameter.c": "Flash 파라미터",
+    "ecat_main.c": "EtherCAT PDO",
+    "rtc.c": "BKPSRAM",
+    "com_hmi.c": "HMI Modbus",
+  };
+  let html = `<h2 id="files">Part K — Core/Src 파일 맵</h2><table class="data-table"><tr><th>파일</th><th>줄</th><th>역할</th></tr>`;
+  for (const f of fs.readdirSync(SRC).filter((x) => x.endsWith(".c")).sort()) {
+    html += `<tr><td class="mono">${esc(f)}</td><td>${countLines(path.join(SRC, f)).toLocaleString()}</td><td>${esc(roles[f] || "인프라/보조")}</td></tr>`;
   }
-  html += `</tbody></table>`;
-  return html;
+  return html + `</table>`;
 }
 
-function main() {
+function buildStructEight() {
+  return `<h2 id="struct8">Part L — 핵심 8대 구조체 (변수 ↔ 역할)</h2>
+<table class="data-table">
+<tr><th>변수</th><th>타입</th><th>층</th><th>역할</th></tr>
+<tr><td class="mono">m_St</td><td>StatusSTR</td><td>출력</td><td>0x30 지상반 상태. ForkWork[], Inv_St[]</td></tr>
+<tr><td class="mono">m_pgmEnv</td><td>PGMEnvSTR</td><td>실행</td><td>RunMode, timer1ms, 내부 플래그 (지상반 비공개)</td></tr>
+<tr><td class="mono">m_WorkData</td><td>SRM_WorkDataSTR[30]</td><td>입력/실행</td><td>static 실행 큐. ForkAct, TargetPos</td></tr>
+<tr><td class="mono">m_BKSram</td><td>BKSRamSTR</td><td>출력/복구</td><td>정전복구 AlarmLog, WorkInfo</td></tr>
+<tr><td class="mono">m_ExtSEnv0~2</td><td>ExtFlash*</td><td>파라미터</td><td>랙/스테이션/포크/타임아웃 Flash</td></tr>
+<tr><td class="mono">WorkCmd</td><td>WorkCmdSTR</td><td>입력</td><td>0x41 패킷 파싱 형식</td></tr>
+</table>
+<p>멤버 트리 → <a href="SRM_구조체트리.html">구조체 트리</a></p>`;
+}
+
+function buildLearningGuide() {
+  console.log("Loading sources...");
+  const devText = read(DEV_SRM);
+  const tmlText = read(COM_TML);
+  const alarmText = read(ALARM);
   const runSeq = parseRunSeq(read(path.join(INC, "dev_SRM.h")));
-  const devLines = countLines(path.join(SRC, "dev_SRM.c"));
-  const tmlLines = countLines(path.join(SRC, "com_tml.c"));
+  const runCases = extractRunCases(devText);
+  const tmlHandlers = extractTmlHandlers(tmlText);
+  const stores = extractStoreFunctions(devText);
+  const saves = extractSaveFunctions(alarmText);
+  const userDef = read(path.join(INC, "User_Define.h"));
+  const forkSteps = parseEnumBlock(userDef, "enumCMD_FORK_STEP_PROCESS");
+  const workStatus = [];
+  for (const line of userDef.split("\n")) {
+    const m = line.match(/#define\s+(WORK_STATUS_\w+)\s+(\d+)/);
+    if (m) workStatus.push({ name: m[1], val: m[2], comment: "" });
+  }
 
   const css = `
-    * { box-sizing: border-box; }
-    body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; margin: 0; color: #111; line-height: 1.65; }
-    .layout { display: flex; min-height: 100vh; }
-    nav.sidebar { width: 280px; background: #1a2e1f; color: #e8f0ea; position: sticky; top: 0; height: 100vh;
-      overflow-y: auto; padding: 16px 12px; flex-shrink: 0; font-size: 9.5pt; }
-    nav.sidebar a { color: #b8dcc8; text-decoration: none; display: block; padding: 3px 8px; border-radius: 4px; }
-    nav.sidebar a:hover { background: #2a4a35; color: #fff; }
-    nav.sidebar .part { color: #7ec99a; font-weight: 700; margin: 14px 0 4px; font-size: 8.5pt; text-transform: uppercase; }
-    main { flex: 1; padding: 28px 40px 80px; max-width: 1100px; }
-    h1 { font-size: 22pt; border-bottom: 4px solid #1a6b3c; padding-bottom: 12px; margin-top: 0; }
-    h2 { font-size: 15pt; background: #2c3e50; color: #fff; padding: 10px 16px; margin: 40px 0 16px; border-radius: 4px; }
-    h3 { font-size: 12pt; color: #1a5; border-left: 5px solid #1a6b3c; padding-left: 10px; margin: 24px 0 10px; }
-    h4 { font-size: 11pt; color: #333; margin: 16px 0 8px; }
-    .meta { background: #f0f7f2; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 10pt; }
-    .note { background: #fafafa; border-left: 4px solid #1a6b3c; padding: 12px 16px; margin: 12px 0; font-size: 10pt; }
-    .warn { background: #fff8f0; border-left: 4px solid #e67e22; padding: 12px 16px; margin: 12px 0; }
-    .goal { background: #e8f4ec; border: 1px solid #b8d4c4; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
-    pre.code { background: #1e2a22; color: #d4ecd8; padding: 14px 18px; border-radius: 8px; overflow-x: auto;
-      font-family: Consolas, "Courier New", monospace; font-size: 9pt; line-height: 1.5; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 12px 0 20px; }
-    .data-table th { background: #1a6b3c; color: #fff; padding: 8px 10px; text-align: left; }
-    .data-table td { border: 1px solid #ddd; padding: 7px 10px; vertical-align: top; }
-    .data-table tr:nth-child(even) { background: #fafcfa; }
-    .mono { font-family: Consolas, monospace; color: #055; font-size: 9pt; }
-    .flow-box { background: #f5f5f5; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0; }
-    .flow-pre { font-family: Consolas, monospace; font-size: 9pt; margin: 0; line-height: 1.55; white-space: pre; }
-    .mermaid-wrap { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 16px 0; overflow-x: auto; }
-    details.run-group { margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; padding: 0 12px 10px; }
-    details.run-group > summary { cursor: pointer; padding: 10px 4px; font-size: 10.5pt; }
-    .pattern-card { border: 1px solid #c8e0d0; border-radius: 8px; padding: 14px 18px; margin: 14px 0; background: #fafcfa; }
-    .pattern-card h4 { margin-top: 0; color: #1a5; }
-    .trap-card { border-left: 4px solid #e67e22; padding: 10px 14px; margin: 10px 0; background: #fffaf5; }
-    .trap-card .name { font-family: Consolas, monospace; font-weight: 700; color: #c0392b; }
-    .week-card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin: 10px 0; }
-    .week-card b { color: #1a5; }
-    .exercise details { margin: 8px 0; border: 1px solid #eee; border-radius: 6px; padding: 8px 12px; }
-    .exercise summary { cursor: pointer; font-weight: 600; }
-    .tier1 { background: #e8f4ec !important; }
-    a.ext { color: #1a6b3c; }
-    @media print { nav.sidebar { display: none; } main { max-width: 100%; } h2 { page-break-before: always; } }
+    *{box-sizing:border-box}
+    body{font-family:"Malgun Gothic",sans-serif;margin:0;color:#111;line-height:1.65}
+    .layout{display:flex;min-height:100vh}
+    nav.sidebar{width:300px;background:#1a2e1f;color:#e8f0ea;position:sticky;top:0;height:100vh;overflow-y:auto;padding:14px;font-size:9pt;flex-shrink:0}
+    nav.sidebar a{color:#b8dcc8;text-decoration:none;display:block;padding:3px 8px;border-radius:4px}
+    nav.sidebar a:hover{background:#2a4a35;color:#fff}
+    nav.sidebar .part{color:#7ec99a;font-weight:700;margin:12px 0 4px;font-size:8pt}
+    main{flex:1;padding:24px 36px 100px;max-width:960px}
+    h1{font-size:20pt;border-bottom:4px solid #1a6b3c;padding-bottom:10px}
+    h2{font-size:14pt;background:#2c3e50;color:#fff;padding:10px 14px;margin:36px 0 14px;border-radius:4px}
+    h3{font-size:11.5pt;color:#1a5;border-left:5px solid #1a6b3c;padding-left:10px;margin:20px 0 8px}
+    .meta,.note,.warn,.goal{padding:12px 16px;margin:12px 0;border-radius:8px;font-size:10pt}
+    .meta{background:#f0f7f2}.note{background:#fafafa;border-left:4px solid #1a6b3c}
+    .warn{background:#fff8f0;border-left:4px solid #e67e22}
+    .goal{background:#e8f4ec;border:1px solid #b8d4c4}
+    pre.code{background:#1e2a22;color:#d4ecd8;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:8.5pt;line-height:1.45}
+    pre.code-sm{background:#f4f8f5;border:1px solid #ccc;padding:10px;overflow-x:auto;font-size:7.5pt;line-height:1.35;max-height:400px;overflow-y:auto}
+    .data-table{width:100%;border-collapse:collapse;font-size:9pt;margin:10px 0 18px}
+    .data-table th{background:#1a6b3c;color:#fff;padding:7px 9px;text-align:left}
+    .data-table td{border:1px solid #ddd;padding:6px 9px;vertical-align:top}
+    .data-table tr:nth-child(even){background:#fafcfa}
+    .mono{font-family:Consolas,monospace;color:#055;font-size:8.5pt}
+    .kind{font-size:8pt;color:#666}
+    .flow-box{background:#f5f5f5;border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+    .flow-pre{font-family:Consolas,monospace;font-size:8.5pt;margin:0;white-space:pre;line-height:1.5}
+    details.case-item{margin:6px 0;border:1px solid #ccc;border-radius:6px;padding:0 12px 10px;background:#fafafa}
+    details.case-item>summary{cursor:pointer;padding:8px 4px;list-style:none;font-size:9.5pt}
+    details.case-item>summary::-webkit-details-marker{display:none}
+    .mermaid-wrap{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:12px 0;overflow-x:auto}
+    .pattern-card{border:1px solid #c8e0d0;border-radius:8px;padding:12px;margin:10px 0;background:#fafcfa}
+    .trap-card{border-left:4px solid #e67e22;padding:8px 12px;margin:8px 0;background:#fffaf5}
+    a.ext{color:#1a6b3c}
+    @media print{nav.sidebar{display:none}main{max-width:100%}h2{page-break-before:always}}
   `;
 
-  const mermaidScript = `
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#e8f4ec',primaryTextColor:'#111',primaryBorderColor:'#1a6b3c',lineColor:'#333',secondaryColor:'#f5f5f5',tertiaryColor:'#fff',fontSize:'13px'}});</script>`;
+  const mermaid = `<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryTextColor:'#111',fontSize:'12px'}});</script>`;
 
-  const nav = `
-<div class="part">시작</div>
-<a href="#intro">이 가이드 목적</a>
-<a href="#relation">사전과의 관계</a>
-<a href="#curriculum">4주 학습 로드맵</a>
-<div class="part">Part 1 — 아키텍처</div>
-<a href="#arch">시스템 전체 구조</a>
-<a href="#mainloop">main 루프·Manager</a>
-<a href="#dataflow">데이터 3층</a>
-<a href="#structs">핵심 8대 구조체</a>
-<div class="part">Part 2 — 통신</div>
-<a href="#tml">TML 프로토콜</a>
-<a href="#cmd41">0x41 작업명령 흐름</a>
-<a href="#cmd50">0x50 Start 흐름</a>
-<a href="#cmd30">0x30 상태 보고</a>
-<div class="part">Part 3 — 상태머신</div>
-<a href="#runmode-intro">RunMode 개념</a>
-<a href="#runmode-flow">자동운전 흐름도</a>
-<a href="#runmode-table">RunMode 전체 표</a>
-<a href="#prepare">PREPARE_MOVE 상세</a>
-<a href="#get-cycle">GET 사이클</a>
-<a href="#put-cycle">PUT 사이클</a>
-<a href="#error-flow">에러·홈복귀</a>
-<div class="part">Part 4 — 코드 읽기·쓰기</div>
-<a href="#files">파일 맵·읽기 순서</a>
-<a href="#patterns">코딩 패턴 6종</a>
-<a href="#traps">명명 함정 8선</a>
-<a href="#subseq">서브 시퀀스</a>
-<a href="#grep">grep 추적법</a>
-<a href="#order-work">ORDER↔WORK 매핑</a>
-<a href="#save-funcs">Save_* API</a>
-<a href="#get-detail">GET 전이 상세</a>
-<a href="#inv-axes">인버터 4축</a>
-<a href="#param">파라미터 3분할</a>
-<a href="#new-step">새 step 설계법</a>
-<a href="#tml-funcs">com_tml 함수</a>
-<a href="#glossary">용어 사전</a>
-<div class="part">Part 5 — 실전</div>
-<a href="#debug">현장 디버깅 체크</a>
-<a href="#exercise">연습문제</a>
-<a href="#transfer">타 설비 이식</a>
-<a href="#next">다음 단계</a>
-<a class="ext" href="SRM_전체심볼_용도사전.html">→ 심볼 용도 사전</a>
-<a class="ext" href="SRM_구조체트리.html">→ 구조체 트리</a>`;
-
-  const body = `
-<h1>MX SRM 전체코드 학습가이드 <span style="font-size:14pt;color:#666">${TODAY_DISP}</span></h1>
+  let body = `
+<h1>MX SRM 전체코드 학습가이드 — 완전판 <span style="font-size:13pt;color:#666">${TODAY_DISP}</span></h1>
 <div class="meta">
-  <b>버전</b> MX SRM App Ver 4.4 &nbsp;|&nbsp;
-  <b>MCU</b> STM32F767 &nbsp;|&nbsp;
-  <b>RunMode</b> ${runSeq.length}개 &nbsp;|&nbsp;
-  <b>dev_SRM.c</b> ${devLines.toLocaleString()}줄 &nbsp;|&nbsp;
-  <b>com_tml.c</b> ${tmlLines.toLocaleString()}줄
+  Ver 4.4 | RunMode case <b>${runCases.length}</b>개 추출 | dev_SRM.c <b>${countLines(DEV_SRM).toLocaleString()}</b>줄 |
+  com_tml.c <b>${countLines(COM_TML).toLocaleString()}</b>줄
 </div>
 
 <div class="goal" id="intro">
-  <h3 style="margin-top:0;border:none;padding:0">이 문서의 목적</h3>
-  <p><b>AI 없이, 다른 설비 제어를 맡아도 스스로 코드를 짜낼 수 있도록</b> 이 펌웨어 전체를 체계적으로 이해하는 학습 가이드입니다.</p>
-  <ul>
-    <li><b>사전(용도사전 HTML)</b> = 심볼이 <em>뭐냐</em> (Ctrl+F 도구)</li>
-    <li><b>이 가이드</b> = 코드가 <em>왜 이렇게 짜였고, 어떤 순서로 읽고, 어떤 패턴으로 짜는지</em></li>
-  </ul>
-  <p>크레인/물류 설비 제어의 본질 — <b>명령 수신 → 내부 큐 → 상태머신 → 축 제어 → 상태 보고</b> — 을 이 코드에서 완성형으로 배웁니다.</p>
-</div>
-
-<div class="note" id="relation">
-  <b>함께 쓰는 문서</b><br>
-  • <a href="SRM_전체심볼_용도사전.html">SRM_전체심볼_용도사전.html</a> — 7,770항목 심볼 사전, 구조체 242개 트리<br>
-  • <a href="SRM_구조체트리.html">SRM_구조체트리.html</a> — 구조체 포함관계만 가볍게<br>
-  <b>읽는 법</b>: 이 가이드로 흐름을 잡고 → 막히는 심볼은 사전에서 검색
+<h3 style="margin-top:0;border:none;padding:0">이 문서의 목적</h3>
+<p><b>큰 흐름 → 작은 흐름</b> 순으로, AI 없이 이 펌웨어와 타 설비 제어를 스스로 짤 수 있게 하는 <b>완전판 학습 HTML</b>.</p>
+<ul>
+<li><b>Part A~I</b>: 개념·시간축·통신·상태머신 (사람이 쓴 해설)</li>
+<li><b>Part G</b>: dev_SRM.c에서 <b>자동 추출</b>한 ${runCases.length}개 case 소스·전이</li>
+<li><b>심볼 사전</b>: Ctrl+F로 이름 검색 (<a href="SRM_전체심볼_용도사전.html">링크</a>)</li>
+</ul>
+<p><b>읽는 법</b>: A(3층·시간) → B(0x41) → C(0x50) → D(루프) → F(GET표) → G(case 펼치기)</p>
 </div>
 
 <h2 id="curriculum">4주 학습 로드맵</h2>
-<div class="week-card"><b>1주차 — 뼈대 잡기</b><br>
-  main.c while(1) → Manager 목록 → m_St / m_pgmEnv / m_WorkData 역할 구분<br>
-  이 가이드 Part1 전체 + 심볼사전 섹션0(코드 전체 맵)</div>
-<div class="week-card"><b>2주차 — 통신·명령</b><br>
-  com_tml.c: TY_STATUS_REQ(0x30), TY_CMD_ORDER(0x41), TY_CMD_START(0x50)<br>
-  rxCmdOrder → Store_Work_Data* → m_WorkData 채워지는 과정 추적</div>
-<div class="week-card"><b>3주차 — 상태머신</b><br>
-  dev_SRM.c SRM_Machine_Run_Process() switch 전체<br>
-  GET 1사이클: STAND_BY→START→PREPARE→MOVE→LOADING_*→COMPLETE 끝까지 따라가기</div>
-<div class="week-card"><b>4주차 — 패턴·실전</b><br>
-  코딩 패턴 6종 암기 수준으로 이해, 연습문제 풀기<br>
-  직접 case 하나에 한글 주석 달며 읽기, 에러 경로 추적</div>
-
-<h2 id="arch">Part 1 — 시스템 전체 구조</h2>
-<h3>한 줄 요약</h3>
-<p>STM32 MCU가 <b>지상반(TML UART)</b>에서 작업을 받고, <b>상태머신</b>으로 주행·승강·포크를 제어하며, <b>EtherCAT</b>으로 인버터를 돌리고, <b>0x30 폴링</b>으로 상태를 돌려준다.</p>
+<div class="note"><b>1주</b> Part A+D + 심볼사전 섹션0 |
+<b>2주</b> Part B+C+H (0x41/0x50) |
+<b>3주</b> Part E+F+G (PREPARE~GET case) |
+<b>4주</b> Part I + 연습 + case 주석 달기</div>
 
 <div class="mermaid-wrap"><pre class="mermaid">
 flowchart TB
-  subgraph Ground["지상반 WCS"]
-    CMD41["0x41 작업명령"]
-    CMD50["0x50 Start"]
-    POLL30["0x30 상태폴링"]
+  subgraph G["지상반"]
+    A41["0x41 명령"]
+    A50["0x50 Start"]
+    A30["0x30 폴링"]
   end
-  subgraph MCU["STM32F767"]
-    TML["com_tml.c"]
-    STORE["Store_Work_Data*"]
-    WDATA["m_WorkData static"]
-    RUN["SRM_Machine_Run_Process"]
-    RUNMODE["m_pgmEnv.SRM_RunMode"]
-    SAVE["Save_* alarm.c"]
-    MST["m_St StatusSTR"]
-    ECAT["ecat_main.c PDO"]
+  subgraph M["MCU"]
+    TML["com_tml"]
+    WD["m_WorkData"]
+    RM["SRM_RunMode"]
+    ST["m_St"]
   end
-  subgraph Field["현장"]
-    TRAV["주행 인버터"]
-    LIFT["승강 인버터"]
-    FORK["포크 인버터"]
-  end
-  CMD41 --> TML --> STORE --> WDATA
-  CMD50 --> TML --> RUN
-  WDATA --> RUN
-  RUN --> RUNMODE
-  RUN --> ECAT --> TRAV & LIFT & FORK
-  RUN --> SAVE --> MST
-  POLL30 --> TML
-  MST --> TML --> POLL30
+  A41-->TML-->WD
+  A50-->RM
+  RM-->ST
+  ST-->A30
 </pre></div>
 
-<h3>레이어 4단</h3>
-<table class="data-table">
-  <tr><th>레이어</th><th>역할</th><th>대표 파일</th><th>비유</th></tr>
-  <tr class="tier1"><td>L1 통신</td><td>지상반·HMI·EtherCAT I/O</td><td>com_tml.c, com_hmi.c, ecat_main.c</td><td>전화 받는 교환원</td></tr>
-  <tr class="tier1"><td>L2 논리</td><td>작업 해석, 상태머신, 조건검사</td><td>dev_SRM.c</td><td>두뇌·판단</td></tr>
-  <tr class="tier1"><td>L3 상태</td><td>지상반 보고, BKPSRAM, 에러</td><td>alarm.c, rtc.c</td><td>일기장·얼굴</td></tr>
-  <tr><td>L4 HW</td><td>HAL, FPGA, 타이머, Flash</td><td>main.c, fpga.c, flash.c</td><td>신체·근육</td></tr>
-</table>
-
-<h2 id="mainloop">main 루프와 Manager 체계</h2>
-<pre class="code">// main.c while(1) — 매 사이클 반복
-AlarmManager();      // DI/DO, 에러, Save_* 트리거
-FpgaManager();       // FPGA 통신
-McuComManager();     // MCU 보조 통신
-TMLComManager();     // ★ 지상반 UART 수신/송신
-EtherNetManager();   // 이더넷
-ECAT_Manager();      // ★ 인버터 PDO 갱신
-SRM_Manager();       // ★ SRM 제어 진입
-  └─ SRM_Machine_Process()      // SSR/연결 등
-  └─ SRM_Machine_Run_Process()  // ★★ 상태머신 본체
-  └─ HMI_ModbusTCP_Proc()</pre>
-
-<div class="note">
-  <b>임베디드 관점</b>: super loop 구조. RTOS 태스크가 아니라 <b>while(1) 협력적 멀티태스킹</b>.
-  상태머신은 <code>SRM_Machine_Run_Process()</code> 한 함수의 giant switch.
-  1ms 타이머 ISR에서 <code>m_pgmEnv.timer1ms++</code> → 모든 딜레이의 시계.
-</div>
-
-<h2 id="dataflow">데이터 3층 — 반드시 구분</h2>
-<div class="flow-box"><pre class="flow-pre">[입력층]  0x41 WorkCmdSTR  →  rxCmdOrder()  →  Store_Work_Data*()  →  m_WorkData[s_WorkInx]
-                                                                              │
-[실행층]  m_pgmEnv.SRM_RunMode (enumSRM_RUN_SEQ)  ←── SRM_Machine_Run_Process() switch
-          m_pgmEnv.SRM_RunTimer, Sub_Run_Step (축별 서브시퀀스)
-                                                                              │
-[출력층]  Save_ForkWork_*() / Save_ForkMove_*()  →  m_St (StatusSTR)  →  0x30 응답
-          save_error_code()  →  m_St 에러 + m_BKSram.AlarmLog</pre></div>
-
-<div class="warn">
-  <b>초보가 가장 많이 헷갈리는 것</b>: m_WorkData(실행용)와 m_St(보고용)를 동시에 본다.<br>
-  디버깅 시 "지상반 화면에 뭐가 보이나" → m_St / "MCU가 실제 뭘 실행하나" → m_WorkData + RunMode
-</div>
-
-<h2 id="structs">핵심 8대 구조체</h2>
-<table class="data-table">
-  <tr><th>변수</th><th>타입</th><th>누가 씀</th><th>한 줄 역할</th></tr>
-  <tr><td class="mono">m_St</td><td>StatusSTR</td><td>지상반 0x30</td><td>운전상태 얼굴. ForkWork[], Inv_St[], DI/DO</td></tr>
-  <tr><td class="mono">m_pgmEnv</td><td>PGMEnvSTR</td><td>MCU 내부</td><td>RunMode, timer1ms, 통신링크, 내부 플래그</td></tr>
-  <tr><td class="mono">m_WorkData</td><td>SRM_WorkDataSTR[30]</td><td>dev_SRM static</td><td>이번 사이클 작업 큐. ForkAct, TargetPos, DrvData</td></tr>
-  <tr><td class="mono">m_BKSram</td><td>BKSRamSTR</td><td>rtc.c</td><td>정전복구. AlarmLog, WorkInfo</td></tr>
-  <tr><td class="mono">m_ExtSEnv0</td><td>ExtFlashSEnv0</td><td>파라미터</td><td>랙·셀·주행 드라이브</td></tr>
-  <tr><td class="mono">m_ExtSEnv1</td><td>ExtFlashSEnv1</td><td>파라미터</td><td>승강·스테이션·인터록</td></tr>
-  <tr><td class="mono">m_ExtSEnv2</td><td>ExtFlashSEnv2</td><td>파라미터</td><td>포크·CtrParam·타임아웃</td></tr>
-  <tr><td class="mono">WorkCmd</td><td>WorkCmdSTR</td><td>com_tml</td><td>0x41 수신 직후 원본. OrderCode, Fork[]</td></tr>
-</table>
-<p>멤버 상세 트리 → <a href="SRM_구조체트리.html">구조체 트리 HTML</a></p>
-
-<h2 id="tml">Part 2 — TML 통신 (Vexi)</h2>
-<h3>주요 TY_* 타입</h3>
-<table class="data-table">
-  <tr><th>코드</th><th>이름</th><th>방향</th><th>역할</th></tr>
-  <tr><td>0x30</td><td>TY_STATUS_REQ</td><td>지상반→MCU</td><td>상태 폴링. m_St 기반 응답</td></tr>
-  <tr><td>0x41</td><td>TY_CMD_ORDER</td><td>지상반→MCU</td><td>작업 명령. WorkCmdSTR 파싱</td></tr>
-  <tr><td>0x50</td><td>TY_CMD_START</td><td>지상반→MCU</td><td>Start ON. RunMode=START</td></tr>
-  <tr><td>0x51</td><td>TY_CMD_MOVE_HOME</td><td>지상반→MCU</td><td>홈 위치 이동</td></tr>
-  <tr><td>0x52</td><td>TY_CMD_ERROR_RESET</td><td>지상반→MCU</td><td>에러 리셋</td></tr>
-  <tr><td>0x53</td><td>TY_CMD_ORDER_DELETE</td><td>지상반→MCU</td><td>작업 삭제</td></tr>
-  <tr><td>0x55</td><td>TY_EMERGENCY_STOP_REQ</td><td>지상반→MCU</td><td>비상정지</td></tr>
-  <tr><td>0xA3~A8</td><td>파라미터</td><td>양방향</td><td>ExtSEnv 다운로드/업로드</td></tr>
-</table>
-
-<h2 id="cmd41">0x41 작업명령 수신 흐름</h2>
-<div class="mermaid-wrap"><pre class="mermaid">
-sequenceDiagram
-  participant WCS as 지상반
-  participant TML as com_tml rxCmdOrder
-  participant Store as Store_Work_Data*
-  participant WD as m_WorkData
-  WCS->>TML: TY_CMD_ORDER 0x41
-  TML->>TML: STAND_BY? Auto? Fault? ForkCenter?
-  alt 수락
-    TML->>Store: OrderCode별 분기
-    Store->>WD: ForkAct, TargetPos, From/To Step
-    TML-->>WCS: accept OK
-  else 거부
-    TML-->>WCS: COMMAND_ERROR_*
-  end
-</pre></div>
-
-<p><b>rxCmdOrder() 진입 조건 (거부 사유)</b>:</p>
-<ul>
-  <li>Fault 상태, Manual SW, RunMode≠STAND_BY, 포크 센터 이탈, Auto 모드 아님</li>
-  <li>GET/PUT 시 StartOn==0 이면 NON_ONLINE</li>
-  <li>화물 센서 이상 (GoodsFlag, DISABLE 설정 시 생략)</li>
-</ul>
-<p>수락 후 <code>Store_Work_Data / Store_Work_Data_1 / Store_Work_Data_Fix</code> 등 OrderCode·ForkAct에 따라 m_WorkData 채움.</p>
-
-<h2 id="cmd50">0x50 Start 흐름</h2>
-<pre class="code">// com_tml.c rxCmdStart() 요지
-m_pgmEnv.SRM_RunMode = RUN_SEQ_START;
-// 이후 dev_SRM.c SRM_Machine_Run_Process()의 case RUN_SEQ_START: 에서
-// m_WorkData[s_WorkInx].ForkAct 에 따라 LOADING/UNLOADING/MOVE 분기</pre>
-
-<h2 id="cmd30">0x30 상태 보고</h2>
-<p>지상반이 주기 폴링 → MCU가 <code>m_St</code> 내용을 패킷으로 응답.</p>
-<ul>
-  <li><code>m_St.ForkWork[i]</code> — 작업별 OrderStatus, OrderProcess(스텝)</li>
-  <li><code>m_St.Inv_St[4]</code> — 축별 위치·속도·GoodsFlag</li>
-  <li><code>m_St.SRM_Status1/2</code> — Auto, StartOn, Fault 비트</li>
-</ul>
-<p><b>Save_*</b> 함수가 m_St를 갱신. UART로 즉시 push가 아니라 <b>다음 0x30 폴링</b> 때 반영.</p>
-
-<h2 id="runmode-intro">Part 3 — RunMode (상태머신)</h2>
-<h3>개념</h3>
-<p><code>m_pgmEnv.SRM_RunMode</code> = enum <code>enumSRM_RUN_SEQ</code> (dev_SRM.h, ${runSeq.length}개)</p>
-<p><code>SRM_Machine_Run_Process()</code> = <b>거대한 switch-case</b>. 매 main 루프마다 현재 case <b>한 스텝</b>만 실행.</p>
-<p>case 안에서 조건 충족 시 <code>m_pgmEnv.SRM_RunMode = 다음값</code> 으로 전이. <b>break 필수.</b></p>
-
-<h2 id="runmode-flow">자동운전 전체 흐름도</h2>
-<div class="mermaid-wrap"><pre class="mermaid">
-stateDiagram-v2
-  [*] --> STAND_BY
-  STAND_BY --> START: 0x50 Start
-  START --> PREPARE_MOVE_0: 작업분석완료
-  PREPARE_MOVE_0 --> BRAKE_RELEASE: ENABLE옵션
-  PREPARE_MOVE_0 --> MOVE_DELAY: InPosition스킵
-  BRAKE_RELEASE --> MOVE_DELAY: nFlag==0x03
-  MOVE_DELAY --> START_MOVE_0
-  START_MOVE_0 --> TRAV_LIFT_MOVING
-  TRAV_LIFT_MOVING --> TRAV_LIFT_AFTER_MOVE: 도착
-  TRAV_LIFT_AFTER_MOVE --> FORK_START: 이동완료
-  FORK_START --> LOADING: GET
-  FORK_START --> UNLOADING: PUT
-  LOADING --> COMPLETE: LOAD_COMPLETE
-  UNLOADING --> COMPLETE: UNLOAD_COMPLETE
-  COMPLETE --> STAND_BY: 사이클종료
-  TRAV_LIFT_MOVING --> ERROR_TRAV: 타임아웃/이상
-  LOADING --> ERROR_FORK: 포크이상
-  ERROR_TRAV --> RETURN_HOME
-  ERROR_FORK --> RETURN_HOME
-</pre></div>
-
-<h2 id="runmode-table">RunMode 전체 그룹별 표</h2>
-${buildRunSeqTable(runSeq)}
-
-<h2 id="prepare">PREPARE_MOVE 구간 상세 (지금 보고 계신 부분)</h2>
-<h4>case RUN_SEQ_PREPARE_MOVE_0</h4>
-<ol>
-  <li><code>Check_Trav_lift_In_Postion()</code> — 주행·승강 목표 도착 여부</li>
-  <li><code>Rack_fork_obstruction</code> — 1이면 InPosition이어도 재이동</li>
-  <li>이동 필요 시: StartPos/TargetPos/Move_Dir 계산, 브레이크 해제 옵션 분기</li>
-  <li><code>Save_ForkWork_OrderProcess()</code> — 지상반에 "이동중" 스텝 보고</li>
-</ol>
-
-<h4>case RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0</h4>
-<pre class="code">nFlag = 0;
-if (Get_Motor_Brake_Release(INV_TRAVEL))  nFlag |= cbits[0]; // bit0=주행 해제OK
-if (Get_Motor_Brake_Release(INV_HOIST))     nFlag |= cbits[1]; // bit1=승강 해제OK
-// 3초 내 nFlag==0x03 → RUN_SEQ_MOVE_BEFORE_DELAY
-// 타임아웃 → save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag)</pre>
-
-<h2 id="get-cycle">GET(적재) 사이클 단계</h2>
-<table class="data-table">
-  <tr><th>순서</th><th>RunMode 구간</th><th>현장 동작</th><th>보고 스텝 예</th></tr>
-  <tr><td>1</td><td>PREPARE → MOVE</td><td>From 셀까지 주행·승강</td><td>CMD_FORK_STEP_MOVING_FROM</td></tr>
-  <tr><td>2</td><td>LOADING_INTERLOCK</td><td>스테이션/CV 인터록 확인</td><td>—</td></tr>
-  <tr><td>3</td><td>LOADING_FORK_OUT</td><td>포크 랙 진출</td><td>CMD_FORK_STEP_FORK_OUT</td></tr>
-  <tr><td>4</td><td>LOADING_FORK_OUT_LIFT_UP</td><td>리프트 업(적재)</td><td>CMD_FORK_STEP_LIFT_UP</td></tr>
-  <tr><td>5</td><td>LOADING_FORK_IN</td><td>포크 복귀</td><td>CMD_FORK_STEP_FORK_IN</td></tr>
-  <tr><td>6</td><td>LOADING_COMPLETE</td><td>화물 센서 확인</td><td>WORK_STATUS_COMPLETE</td></tr>
-</table>
-
-<h2 id="put-cycle">PUT(이재) 사이클 — GET과 대칭</h2>
-<p>LOADING → UNLOADING, LIFT_UP → LIFT_DOWN, 화물 있어야 진행(GoodsFlag), 공출고 검사 등 차이.</p>
-<p>RunMode 번호: LOADING=30대, UNLOADING=50대 (dev_SRM.h enum 값 의도적 간격 — 중간에 서브 case 삽입 여지)</p>
-
-<h2 id="error-flow">에러·홈복귀 경로</h2>
-<div class="mermaid-wrap"><pre class="mermaid">
-flowchart LR
-  E1[RUN_SEQ_ERROR_FORK_STOP] --> S1[포크 정지]
-  E2[RUN_SEQ_ERROR_TRAV_LIFT_*] --> S2[주행·승강 정지]
-  S1 & S2 --> B[브레이크 체결 확인]
-  B --> H[RUN_SEQ_RETURN_HOME_*]
-  H --> SB[RUN_SEQ_STAND_BY]
-</pre></div>
-<p><code>save_error_code(ERROR1_*, sub, nFlag)</code> → m_St 에러 비트 + AlarmLog. nFlag는 어느 축/센서 문제인지 서브코드.</p>
-
-<h2 id="files">Part 4 — 파일 맵과 읽기 순서</h2>
+${buildThreeLayersDeep()}
+${buildRxCmdOrderDeep()}
+${buildStartOnDeep()}
+${buildMainLoopDeep()}
+${buildPrepareMoveDeep()}
+${buildLoadingFlowTable()}
+${buildPutFlowTable()}
+${buildAllRunCaseIndex(runCases, devText, runSeq)}
+${buildTmlTable(tmlHandlers)}
+${buildStoreSaveChapter(stores, saves)}
+${buildForkStepTable(forkSteps, workStatus)}
 ${buildFileTable()}
+${buildStructEight()}
 
-<h3>권장 읽기 순서 (처음부터)</h3>
-<ol>
-  <li><b>User_Define.h</b> — StatusSTR, PGMEnvSTR, SRM_WorkDataSTR 구조만 먼저</li>
-  <li><b>dev_SRM.h</b> — enumSRM_RUN_SEQ, WORK_*, INV_* enum</li>
-  <li><b>com_tml.h</b> — TY_*, ORDER_CODE_*</li>
-  <li><b>main.c</b> — while(1), timer1ms ISR</li>
-  <li><b>com_tml.c</b> — rxCmdOrder, rxCmdStart (약 2340행~)</li>
-  <li><b>dev_SRM.c</b> — SRM_Machine_Run_Process (약 58437행~). <b>한번에 안 읽음. RunMode 그룹별로.</b></li>
-  <li><b>alarm.c</b> — Save_* 함수들</li>
-</ol>
+<h2 id="patterns">코딩 패턴</h2>
+${PATTERNS.map((p) => `<div class="pattern-card"><h4>${esc(p.title)}</h4><pre class="code">${esc(p.code)}</pre><p>${esc(p.explain)}</p></div>`).join("")}
 
-<h2 id="patterns">코딩 패턴 6종 (타 설비에도 그대로 쓰임)</h2>
-${PATTERNS.map((p) => `
-<div class="pattern-card">
-  <h4>${esc(p.title)} <span class="mono" style="font-weight:normal">— ${esc(p.file)}</span></h4>
-  <pre class="code">${esc(p.code)}</pre>
-  <p>${esc(p.explain)}</p>
-</div>`).join("")}
+<h2 id="traps">명명 함정</h2>
+${TRAPS.map((t) => `<div class="trap-card"><div class="mono">${esc(t.name)}</div><b>함정</b>: ${esc(t.trap)}<br><b>실제</b>: ${esc(t.real)}</div>`).join("")}
 
-<h2 id="traps">명명 함정 8선</h2>
-${NAMING_TRAPS.map((t) => `
-<div class="trap-card">
-  <div class="name">${esc(t.name)}</div>
-  <div><b>함정</b>: ${esc(t.trap)}</div>
-  <div><b>실제</b>: ${esc(t.real)}</div>
-</div>`).join("")}
+<h2 id="exercise">연습문제</h2>
+<details><summary>0x41 후 RunMode는?</summary><p>STAND_BY (Start 전)</p></details>
+<details><summary>실행 레시피 변수?</summary><p>m_WorkData (static)</p></details>
+<details><summary>지상반 스텝 보고 함수?</summary><p>Save_ForkWork_OrderProcess</p></details>
+<details><summary>nFlag 0x03?</summary><p>주행+승강 브레이크 둘 다 해제 확인</p></details>
 
-<h2 id="subseq">이중 상태머신 — RunMode + Sub_Run_Step</h2>
-<p>RunMode가 "지금 GET 중 포크 진출 단계"라면, 포크 모터 세부 제어는 <code>m_Fork_Sub_Run_Step</code> switch가 담당.</p>
-<table class="data-table">
-  <tr><th>변수</th><th>축</th><th>예시 함수</th></tr>
-  <tr><td class="mono">m_Trav_Sub_Run_Step</td><td>주행</td><td>Auto_Ctr_Travel(), 감속 dog 처리</td></tr>
-  <tr><td class="mono">m_Lift_Sub_Run_Step</td><td>승강</td><td>Auto_Ctr_Lift()</td></tr>
-  <tr><td class="mono">m_Fork_Sub_Run_Step</td><td>포크</td><td>포크 진출/복귀 위치제어</td></tr>
-</table>
-<p>큰 흐름 읽을 때는 RunMode만, 축 모터 이상 디버깅 시 Sub_Run_Step 추가 추적.</p>
-
-<h2 id="grep">grep 4단계 추적법</h2>
-<ol>
-  <li><b>심볼 검색</b> — 예: <code>Rack_fork_obstruction</code></li>
-  <li><b>쓰기(=) 찾기</b> — 누가 1로 세팅하나</li>
-  <li><b>if 조건</b> — 어떤 분기에서 참/거짓</li>
-  <li><b>RunMode/Save 연결</b> — 최종적으로 어느 case·보고로 이어지나</li>
-</ol>
-<p>사전 HTML에 사용 파일 열이 있으면 1단계 생략 가능.</p>
-
-<h2 id="debug">Part 5 — 현장 디버깅 체크리스트</h2>
-<p>작업이 안 돌 때 이 순서로:</p>
-<ol>
-  <li>0x41 수락됐나 (COMMAND_ERROR 코드)</li>
-  <li>0x50 Start 됐나 (m_St.StartOn, RunMode≠STAND_BY)</li>
-  <li>m_WorkData[s_WorkInx].ForkAct / TargetPos 값</li>
-  <li>RunMode 현재값 (HMI DEBUG 또는 m_TestStatus)</li>
-  <li>GoodsFlag / ForkCenter / InPosition 스킵 조건</li>
-  <li>EtherCAT 링크·인버터 Fault (m_St.Inv_St)</li>
-  <li>BKPSRAM WorkInfo 복구 이상 여부</li>
-</ol>
-
-<h2 id="exercise">연습문제 (클릭하여 정답)</h2>
-<div class="exercise">
-${EXERCISES.map((e, i) => `
-<details><summary>Q${i + 1}. ${esc(e.q)}</summary>
-  <p><b>힌트</b>: ${esc(e.hint)}</p>
-  <p><b>정답</b>: ${esc(e.a)}</p>
-</details>`).join("")}
-</div>
-
-<h2 id="transfer">타 설비 제어로 이식할 때 가져갈 것</h2>
-<table class="data-table">
-  <tr><th>이식 요소</th><th>SRM에서의 구현</th><th>다른 설비 적용</th></tr>
-  <tr><td>명령-실행-보고 3층</td><td>WorkCmd→m_WorkData→m_St</td><td>PLC명령→내부레시피→상태레지스터</td></tr>
-  <tr><td>상태머신 switch</td><td>enumSRM_RUN_SEQ</td><td>공정 단계 enum + case</td></tr>
-  <tr><td>이중 시퀀스</td><td>RunMode + Sub_Run_Step</td><td>공정스텝 + 축별 모션스텝</td></tr>
-  <tr><td>비트 플래그 에러</td><td>nFlag |= cbits[n]</td><td>알람 워드 비트맵</td></tr>
-  <tr><td>타이머 기반 대기</td><td>timer1ms + getCalcTimer1ms</td><td>OS tick / HW timer</td></tr>
-  <tr><td>파라미터 분리</td><td>ExtSEnv0~2 Flash</td><td>Recipe DB / NV RAM</td></tr>
-  <tr><td>정전복구</td><td>m_BKSram</td><td>배터리백업 SRAM / FRAM</td></tr>
-</table>
-
-<h2 id="order-work">ORDER_CODE ↔ WORK_ForkAct 매핑</h2>
-<p>0x41의 OrderCode가 내부 <code>m_WorkData[].ForkAct</code>으로 변환됩니다. 이 매핑이 상태머신 분기의 시작점입니다.</p>
-<table class="data-table">
-  <tr><th>ORDER_CODE (0x41)</th><th>값</th><th>→ ForkAct</th><th>RunMode 진입</th></tr>
-  <tr><td>ORDER_CODE_MOVE</td><td>0x01</td><td>WORK_MOVE_ONLY</td><td>이동만, LOADING/UNLOADING 생략</td></tr>
-  <tr><td>ORDER_CODE_STORE</td><td>0x12</td><td>WORK_FORK1_GET 등</td><td>RUN_SEQ_LOADING_*</td></tr>
-  <tr><td>ORDER_CODE_UNSTORE</td><td>0x13</td><td>WORK_FORK1_PUT 등</td><td>RUN_SEQ_UNLOADING_*</td></tr>
-  <tr><td>ORDER_CODE_RACK_TO_RACK</td><td>0x14</td><td>GET+PUT 조합</td><td>From GET → To PUT 연속</td></tr>
-  <tr><td>ORDER_CODE_STATION_TO_STATION</td><td>0x15</td><td>스테이션 반송</td><td>IsStation 플래그 사용</td></tr>
-  <tr><td>ORDER_CODE_STICKY</td><td>0x1A</td><td>WORK_FORK1_STICKY</td><td>화물검사 생략 가능</td></tr>
-</table>
-
-<h2 id="save-funcs">Save_* 함수 — 지상반 보고 API</h2>
-<p>alarm.c에 정의. <b>m_St만</b> 갱신. UART 즉시 송신 아님 → 다음 0x30 때 반영.</p>
-<table class="data-table">
-  <tr><th>함수</th><th>갱신 필드</th><th>호출 시점 예</th></tr>
-  <tr><td class="mono">Save_ForkWork_OrderStatus</td><td>m_St.ForkWork[n].OrderStatus</td><td>WORK_STATUS_DOING/COMPLETE/FAIL</td></tr>
-  <tr><td class="mono">Save_ForkWork_OrderProcess</td><td>m_St.ForkWork[n].OrderProcess</td><td>CMD_FORK_STEP_MOVING_FROM 등 스텝</td></tr>
-  <tr><td class="mono">Save_ForkMove_OrderStatus</td><td>m_St.ForkMove.OrderStatus</td><td>WORK_MOVE_ONLY 시</td></tr>
-  <tr><td class="mono">Save_ForkMove_OrderProcess</td><td>m_St.ForkMove.OrderProcess</td><td>CMD_MOVE_STEP_*</td></tr>
-</table>
-
-<h2 id="start-case">case RUN_SEQ_START — 작업 분기의 시작</h2>
-<p><code>SRM_Machine_Run_Process()</code> 약 58437행. static 변수들이 이 함수 안에서 사이클 전체 유지:</p>
-<table class="data-table">
-  <tr><th>static 변수</th><th>역할</th></tr>
-  <tr><td class="mono">s_WorkInx</td><td>현재 처리 중 m_WorkData 인덱스</td></tr>
-  <tr><td class="mono">s_Work_Fork_Flag</td><td>포크1/2 동시 작업 비트플래그</td></tr>
-  <tr><td class="mono">s_No_movement</td><td>주행·승강 이동 없이 포크만 할지</td></tr>
-  <tr><td class="mono">s_Delay_Time</td><td>Read_DelayTime()으로 읽은 대기 ms</td></tr>
-  <tr><td class="mono">s_Brake_Release_Retry</td><td>브레이크 해제 재시도 횟수</td></tr>
-</table>
-<p>START case에서 <code>m_WorkData[s_WorkInx].ForkAct</code> switch → PREPARE_MOVE / LOADING_START / UNLOADING_START / FORK_START 등으로 첫 분기.</p>
-
-<h2 id="get-detail">GET 사이클 — RunMode 전이 상세</h2>
-<div class="mermaid-wrap"><pre class="mermaid">
-flowchart TD
-  A[RUN_SEQ_START] --> B[RUN_SEQ_PREPARE_MOVE_0]
-  B --> C{InPosition?}
-  C -->|이동필요| D[BRAKE_RELEASE or MOVE_DELAY]
-  C -->|스킵| E[TRAV_LIFT_AFTER_MOVE]
-  D --> F[START_MOVE_0]
-  F --> G[TRAV_LIFT_MOVING]
-  G --> H[TRAV_LIFT_AFTER_MOVE]
-  H --> I[RUN_SEQ_FORK_START]
-  I --> J[RUN_SEQ_LOADING_START]
-  J --> K[LOADING_INTERLOCK]
-  K --> L[LOADING_FORK_OUT]
-  L --> M[LOADING_FORK_OUT_LIFT_UP]
-  M --> N[LOADING_FORK_IN]
-  N --> O[LOADING_COMPLETE]
-  O --> P[RUN_SEQ_COMPLETE]
-  P --> Q[RUN_SEQ_STAND_BY]
-</pre></div>
-
-<h3>각 LOADING 단계에서 볼 것</h3>
-<table class="data-table">
-  <tr><th>case</th><th>조건/타이머</th><th>축 제어</th><th>Save 보고</th></tr>
-  <tr><td>LOADING_INTERLOCK</td><td>Check_Station_CVOK, 타임아웃</td><td>—</td><td>인터록 실패 시 에러</td></tr>
-  <tr><td>LOADING_PRE_FORK_OUT</td><td>Read_DelayTime PRE_FORK</td><td>—</td><td>CMD_FORK_STEP_PRE_OUT</td></tr>
-  <tr><td>LOADING_FORK_OUT</td><td>m_Fork_Sub_Run_Step</td><td>포크 진출 Auto_Ctr</td><td>CMD_FORK_STEP_FORK_OUT</td></tr>
-  <tr><td>LOADING_FORK_OUT_LIFT_UP</td><td>리프트 인터록</td><td>승강 업</td><td>CMD_FORK_STEP_LIFT_UP</td></tr>
-  <tr><td>LOADING_FORK_IN</td><td>센터센서/정위치</td><td>포크 복귀</td><td>CMD_FORK_STEP_FORK_IN</td></tr>
-  <tr><td>LOADING_COMPLETE</td><td>GOX 화물센서</td><td>—</td><td>WORK_STATUS_COMPLETE</td></tr>
-</table>
-
-<h2 id="inv-axes">인버터 4축 인덱스</h2>
-<table class="data-table">
-  <tr><th>enum</th><th>축</th><th>PDO</th><th>주요 함수</th></tr>
-  <tr><td class="mono">INV_TRAVEL</td><td>주행</td><td>m_SRM_TxPDO[INV_TRAVEL]</td><td>Auto_Ctr_Travel, Motor_Brake_Release</td></tr>
-  <tr><td class="mono">INV_HOIST</td><td>승강</td><td>m_SRM_TxPDO[INV_HOIST]</td><td>Auto_Ctr_Lift</td></tr>
-  <tr><td class="mono">INV_FORK_1</td><td>포크1</td><td>—</td><td>포크 위치제어, GoodsFlag</td></tr>
-  <tr><td class="mono">INV_FORK_2</td><td>포크2</td><td>—</td><td>듀얼포크 시</td></tr>
-</table>
-<p><code>m_St.Inv_St[INV_*]</code> — Current_Pos, Current_Vel, Status1(GoodsFlag, MoveFlag, InPosition)</p>
-
-<h2 id="param">파라미터 3분할 — 현장 튜닝 지점</h2>
-<table class="data-table">
-  <tr><th>구조체</th><th>내용</th><th>바꾸면 뭐가 달라지나</th></tr>
-  <tr><td>m_ExtSEnv0</td><td>랙·셀 좌표, 주행 드라이브</td><td>셀 위치, 주행 속도/가감속</td></tr>
-  <tr><td>m_ExtSEnv1</td><td>승강 드라이브, 스테이션, 인터록</td><td>스테이션 CV OK 조건</td></tr>
-  <tr><td>m_ExtSEnv2</td><td>포크 드라이브, CtrParam, 타임아웃</td><td>딜레이 ms, 타임아웃, 홈복귀 옵션</td></tr>
-</table>
-<p>Read_DelayTime(ForkAct, DELAY_*) — m_ExtSEnv2의 Setup/Auto 타임아웃 테이블 참조.</p>
-
-<h2 id="new-step">[심화] 새 시퀀스 step을 설계한다면</h2>
-<div class="pattern-card">
-  <h4>체크리스트 (다른 설비에도 동일)</h4>
-  <ol>
-    <li><b>enum에 case 추가</b> — dev_SRM.h enumSRM_RUN_SEQ (번호 간격 여유 확인)</li>
-    <li><b>진입 조건</b> — 어느 case에서 m_pgmEnv.SRM_RunMode = 새값 으로 넘기나</li>
-    <li><b>case 본문</b> — 타이머 시작, 조건검사, 축 명령, break</li>
-    <li><b>탈출 조건</b> — 성공 시 다음 RunMode, 실패 시 ERROR_*</li>
-    <li><b>Save 보고</b> — 지상반이 볼 스텝 코드 정의 (CMD_FORK_STEP_* 등)</li>
-    <li><b>에러 서브코드</b> — nFlag 비트 할당 문서화</li>
-    <li><b>파라미터</b> — 딜레이/타임아웃을 ExtSEnv2에 넣을지 결정</li>
-  </ol>
-</div>
-
-<h2 id="tml-funcs">com_tml.c 주요 수신 함수</h2>
-<table class="data-table">
-  <tr><th>TY_*</th><th>함수</th><th>핵심 동작</th></tr>
-  <tr><td>0x30</td><td>txStatus / rx 처리</td><td>m_St 패킷 응답</td></tr>
-  <tr><td>0x41</td><td>rxCmdOrder</td><td>WorkCmdSTR → Store_Work_Data*</td></tr>
-  <tr><td>0x50</td><td>rxCmdStart</td><td>RUN_SEQ_START</td></tr>
-  <tr><td>0x51</td><td>rxCmdMoveHome</td><td>홈 이동 명령</td></tr>
-  <tr><td>0x52</td><td>rxCmdErrorReset</td><td>에러 클리어</td></tr>
-  <tr><td>0x53</td><td>rxCmdOrderDelete</td><td>작업 큐 삭제</td></tr>
-  <tr><td>0x55</td><td>rxEmergencyStop</td><td>비상정지</td></tr>
-</table>
-
-<h2 id="memory">메모리·전역 배치</h2>
-<ul>
-  <li><b>DTCM</b> — main.c의 m_St, m_pgmEnv 등 (__attribute__ dtcm_bss) : 빠른 접근</li>
-  <li><b>BKPSRAM</b> — m_BKSram : 배터리 백업, rtc.c에서 블록 단위 저장</li>
-  <li><b>dev_SRM.c static</b> — m_WorkData[30] : extern 아님, 상태머신 전용</li>
-  <li><b>Flash</b> — m_ExtSEnv0~2 : SRM_Parameter.c로 읽기/쓰기</li>
-</ul>
-
-<h2 id="read-method">효율적인 코드 읽기 방법 (이 가이드 + 사전 병행)</h2>
-<table class="data-table">
-  <tr><th>단계</th><th>할 일</th><th>도구</th></tr>
-  <tr><td>1. 질문 정의</td><td>"GET 시 포크 진출 전 딜레이는?"</td><td>—</td></tr>
-  <tr><td>2. RunMode 찾기</td><td>LOADING_PRE_FORK_OUT</td><td>이 가이드 RunMode 표</td></tr>
-  <tr><td>3. case 열기</td><td>dev_SRM.c 해당 case</td><td>IDE 검색</td></tr>
-  <tr><td>4. 심볼 풀이</td><td>Read_DelayTime, s_Delay_Time</td><td>심볼 용도 사전</td></tr>
-  <tr><td>5. 연결 추적</td><td>누가 RunMode를 여기로 넘기나</td><td>grep "RUN_SEQ_LOADING_PRE"</td></tr>
-  <tr><td>6. 현장 의미</td><td>지상반 화면 스텝 번호</td><td>Save_ForkWork_OrderProcess 인자</td></tr>
-</table>
-
-<h2 id="glossary">용어 사전 (현장 ↔ 코드)</h2>
-<table class="data-table">
-  <tr><th>현장/지상반</th><th>코드</th></tr>
-  <tr><td>작업명령</td><td>0x41, WorkCmdSTR, OrderCode</td></tr>
-  <tr><td>Start ON</td><td>0x50, m_St.SRM_Status1.StartOn, RUN_SEQ_START</td></tr>
-  <tr><td>적재/GET</td><td>ORDER_CODE_STORE, WORK_FORK1_GET, LOADING_*</td></tr>
-  <tr><td>이재/PUT</td><td>ORDER_CODE_UNSTORE, WORK_FORK1_PUT, UNLOADING_*</td></tr>
-  <tr><td>스텝/진행상태</td><td>OrderProcess, CMD_FORK_STEP_*</td></tr>
-  <tr><td>작업결과</td><td>OrderStatus, WORK_STATUS_*</td></tr>
-  <tr><td>이상/알람</td><td>save_error_code, ERROR1_*, m_St.Fault</td></tr>
-  <tr><td>인포지션</td><td>Check_Trav_lift_In_Postion, InPosition 비트</td></tr>
-  <tr><td>홈복귀</td><td>RETURN_HOME_*, TY_CMD_MOVE_HOME</td></tr>
-  <tr><td>원점</td><td>ORIGIN_*, 축별 원점 설정</td></tr>
-</table>
-
-<h2 id="exercise2">추가 연습 — 시퀀스 추적 (스스로 해보기)</h2>
-<div class="exercise">
-<details><summary>브레이크 해제 타임아웃 3초는 어디서?</summary>
-  <p><b>정답</b>: RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0, getCalcTimer1ms &gt; 3000</p>
-</details>
-<details><summary>GET 완료 후 STAND_BY로 돌아가기까지 거치는 case?</summary>
-  <p><b>정답</b>: LOADING_COMPLETE → RUN_SEQ_COMPLETE → (PLC_COM) → RUN_SEQ_STAND_BY</p>
-</details>
-<details><summary>주행 방향은 누가 결정?</summary>
-  <p><b>정답</b>: Check_Trav_Move_Dir() — StartPos vs TargetPos → TRAV_MOVE_FORWARD/REVERSE</p>
-</details>
-<details><summary>에러 80-1 (WORK_TIMEOUT) 서브코드 nFlag=0x01이면?</summary>
-  <p><b>정답</b>: 주행(INV_TRAVEL) 브레이크만 해제 실패. 승강은 OK.</p>
-</details>
-<details><summary>m_WorkData는 extern인가?</summary>
-  <p><b>정답</b>: 아님. dev_SRM.c static. 다른 파일에서 직접 접근 불가.</p>
-</details>
-</div>
-
-<ol>
-  <li>이 가이드 4주 로드맵 완주</li>
-  <li>dev_SRM.c 에 <b>한 개 case</b>를 골라 조건·전이·Save 호출 <b>손으로 주석 달기</b></li>
-  <li>연습: <b>딜레이 200ms 추가</b> — Read_DelayTime / DEF_DELAY_* / case 타이머 중 어디를 바꿀지 찾기만 (실제 수정은 테스트 환경에서)</li>
-  <li>연습: <b>새 RunMode case 하나</b> 설계해보기 (종이에 전이도 그리기)</li>
-  <li>심볼 사전으로 모르는 이름 즉시 검색 — <b>이 습관이 자립의 핵심</b></li>
-</ol>
-
-<div class="goal">
-  <b>최종 목표</b>: 이 HTML + 심볼 사전만으로 현장에서 "어느 case가 문제인지" 스스로 좁히고,
-  다른 크레인/컨베이어/스태커에서도 <b>같은 4층 구조</b>로 제어 코드를 설계할 수 있는 것.
-</div>
+<h2 id="transfer">타 설비 이식</h2>
+<p>명령→큐→상태머신→보고 4층, RunMode switch, nFlag 에러, timer1ms — SRM에서 완성형 패턴.</p>
 `;
 
-  const html = `<!DOCTYPE html>
-<html lang="ko"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SRM 전체코드 학습가이드 ${TODAY_DISP}</title>
-<style>${css}</style>
-</head><body>
-<div class="layout">
-<nav class="sidebar">${nav}</nav>
-<main>${body}</main>
-</div>
-${mermaidScript}
-</body></html>`;
-
-  const outName = `SRM_전체코드_학습가이드_${TODAY}.html`;
-  const outPath = path.join(OUT, outName);
-  fs.writeFileSync(outPath, html, "utf8");
-
-  const readmeAdd = `
-
-## 학습 가이드 (신규)
-
-| 파일 | 내용 |
-|------|------|
-| **${outName}** | **학습 가이드** — 아키텍처, 통신, 상태머신, 패턴, 4주 로드맵, 연습문제 |
-
-- 심볼 사전 = Ctrl+F 찾기용
-- 학습 가이드 = 흐름·패턴·읽기 순서용
-`;
-  let readme = read(path.join(OUT, "README.md"));
-  if (!readme.includes("학습 가이드")) {
-    readme = readme.trimEnd() + readmeAdd;
-    fs.writeFileSync(path.join(OUT, "README.md"), readme, "utf8");
-  }
-
-  console.log(`Done: ${outPath}`);
-  console.log(`Size: ${(fs.statSync(outPath).size / 1024).toFixed(1)} KB`);
+  return {
+    body,
+    css,
+    mermaid,
+    nav: buildNav(),
+    meta: {
+      runCases: runCases.length,
+      tmlHandlers: tmlHandlers.length,
+      devLines: countLines(DEV_SRM),
+      tmlLines: countLines(COM_TML),
+    },
+    sources: { devText, tmlText, alarmText, userDef, runSeq, runCases, tmlHandlers, stores, saves, forkSteps, workStatus },
+  };
 }
 
-main();
+function main() {
+  const g = buildLearningGuide();
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<title>SRM 전체코드 학습가이드 완전판 ${TODAY_DISP}</title><style>${g.css}</style></head>
+<body><div class="layout"><nav class="sidebar">${g.nav}</nav><main>${g.body}</main></div>${g.mermaid}</body></html>`;
+
+  const outName = `SRM_전체코드_학습가이드_완전판_${TODAY}.html`;
+  const outPath = path.join(OUT, outName);
+  fs.writeFileSync(outPath, html, "utf8");
+  fs.writeFileSync(path.join(OUT, `SRM_전체코드_학습가이드_${TODAY}.html`), html, "utf8");
+
+  const mb = (fs.statSync(outPath).size / 1024 / 1024).toFixed(2);
+  console.log(`Done: ${outPath}`);
+  console.log(`Cases: ${g.meta.runCases}, Size: ${mb} MB`);
+}
+
+module.exports = {
+  ROOT,
+  CORE,
+  INC,
+  SRC,
+  OUT,
+  DEV_SRM,
+  COM_TML,
+  ALARM,
+  MAIN,
+  TODAY,
+  TODAY_DISP,
+  read,
+  esc,
+  countLines,
+  extractFunctionBody,
+  parseEnumBlock,
+  parseRunSeq,
+  extractRunCases,
+  extractTmlHandlers,
+  extractSaveFunctions,
+  extractStoreFunctions,
+  findIncomingTransitions,
+  buildLearningGuide,
+  buildNav,
+  buildThreeLayersDeep,
+  buildRxCmdOrderDeep,
+  buildStartOnDeep,
+  buildMainLoopDeep,
+  buildPrepareMoveDeep,
+  buildLoadingFlowTable,
+  buildPutFlowTable,
+  buildAllRunCaseIndex,
+  buildTmlTable,
+  buildStoreSaveChapter,
+  buildForkStepTable,
+  buildFileTable,
+  buildStructEight,
+  RUN_GROUPS,
+  PATTERNS,
+  TRAPS,
+};
+
+if (require.main === module) main();

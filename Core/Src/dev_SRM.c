@@ -4290,14 +4290,16 @@ void Motor_Brake_Release(INT08U nInvertor)
 
 	memset((INT08U*)&nStopVelocity, 0, sizeof(UnitVelocitySTR)); //메모리초기화
 
-	nStopVelocity.Acc = 600;
-	nStopVelocity.Dec = 600;
-	nStopVelocity.Jerk = 1000;
-	nStopVelocity.Spd = 0;
+	nStopVelocity.Acc = 600; //가속도 0.6
+	nStopVelocity.Dec = 600; //감속도 0.6
+	nStopVelocity.Jerk = 1000; //저크타임 1000ms
+	nStopVelocity.Spd = 0; // 속도 0
 
 	nControlWord.W = 0;
 	nControlWord_1.W = 0;
 	nControlWord_2.W = 0;
+
+	//m_ExtSEnv => 설계(파라미터) 데이터, 랙 셀 위치, 셀 오프셋, 주행 드라이브 플래시 다운로세팅
 
 	if (m_ExtSEnv.Machine.mType.Inverter_Vendor == INV_VENDOR_SEW)
 	{
@@ -59005,7 +59007,7 @@ void SRM_Machine_Run_Process()
 
 				//Motor_Brake_Release(INV_TRAV);	// 작업위치일 경우 주행 브레이크는 해제할 필요 없음.
 
-#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE//주행 좌측이동 플래그가 켜지면
+#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE//left가 아니라 lift로 써야하는데 아마 오타를 쓴것 같
 				if ((m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_GET) //포크1번 적재, enum 멤버이므로 각 인덱스가 들어간다.
 					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_PUT))//포크1번 이재
 					|| (m_WorkData[s_WorkInx].ForkAct == WORK_FORK1_STICKY))//포크 1번 스티키 인경우
@@ -59015,76 +59017,82 @@ void SRM_Machine_Run_Process()
 						Motor_Brake_Release(INV_HOIST);//승강 인버터 브레이크를 동작한다.
 				}
 #endif
-				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
-				m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE;
+				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms; //mcu 안에서만쓰는 1ms 클락신호
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_TRAV_LIFT_AFTER_MOVE; //승강동작 이후 시쿠너스
 			}
 
 		}
 		else
 		{
-			s_No_movement = 0;
+			s_No_movement = 0; //주행 승강 이동있음
 
-			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].StartPos = m_St.Inv_St[INV_TRAVEL].Current_Pos;
-			m_WorkData[s_WorkInx].DrvData[INV_HOIST].StartPos = m_St.Inv_St[INV_HOIST].Current_Pos;
-			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Dir = Check_Trav_Move_Dir(s_WorkInx);
-			m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir = Check_Lift_Move_Dir(s_WorkInx);
+			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].StartPos = m_St.Inv_St[INV_TRAVEL].Current_Pos; //지상반의 주행 현재데이터값을 현재 작업데이타구조체의 시작위치에 넣는다
+			m_WorkData[s_WorkInx].DrvData[INV_HOIST].StartPos = m_St.Inv_St[INV_HOIST].Current_Pos; //지상반의 승강 현재데이터값을 현재 작업데이타구조체의 시작위치에 넣는다.
+			m_WorkData[s_WorkInx].DrvData[INV_TRAVEL].Move_Dir = Check_Trav_Move_Dir(s_WorkInx); // 현재의 작업데이터 구조체에 방향이동 관련, 주행 방향 이동 체크
+			m_WorkData[s_WorkInx].DrvData[INV_HOIST].Move_Dir = Check_Lift_Move_Dir(s_WorkInx); // 현재의 작업데이터 구조체에 방향이동 관련, 승강 방향 이동 체크
 
 			s_Delay_Time = Read_DelayTime(m_WorkData[s_WorkInx].ForkAct, DELAY_PREFORE_MOVE);
 
-			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
+			m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms; // 프로그램
 
-#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE
-			Motor_Brake_Release(INV_TRAVEL);
-			Motor_Brake_Release(INV_HOIST);
+#if ENABLE_TRAV_LEFT_MOVE_BRAKE_RELEASE //주행승강 이동 브레이크 개방
+			Motor_Brake_Release(INV_TRAVEL); // 주행인버터 브레이크개방
+			Motor_Brake_Release(INV_HOIST); // 승강인버터 브레이크 개방
 
-			s_Brake_Release_Retry = 0;
+			s_Brake_Release_Retry = 0; // 재시도횟수 초기화
 
-			m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0; //브레이크 개방 준비 시퀀스
 #else
-			m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;
+			m_pgmEnv.SRM_RunMode = RUN_SEQ_MOVE_BEFORE_DELAY;//m_pgmEnv -> mcu 안에서만 쓰는 두뇌상태
 #endif	
 		}
 		break;
 
-	case RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0:
+	case RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_0: //브레이크 개방준비 시퀀스
 		nFlag = 0;
-		if (Get_Motor_Brake_Release(INV_TRAVEL))
+		if (Get_Motor_Brake_Release(INV_TRAVEL)) // 주행인버터 브레이크 개방상태 받음
 		{
-			nFlag |= cbits[0];
+			nFlag |= cbits[0]; // 0x00 주행 승강 브레이크 둘다 미해제
+			                   // 0x01 주행만 해제됨
+			                   // 0x02 승강만 해제됨
+			                   // 0x03 둘 다 해제됨
 		}
 
 		if (Get_Motor_Brake_Release(INV_HOIST))
 		{
-			nFlag |= cbits[1];
+			nFlag |= cbits[1]; // 0x00 주행 승강 브레이크 둘다 미해제
+		                       // 0x01 주행만 해제됨
+	                           // 0x02 승강만 해제됨
+	                           // 0x03 둘 다 해제됨
 		}
 
 		//m_TestStatus.St[DEBUG_STR_20] = nFlag;
 
-		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) > 3000)
+		if (getCalcTimer1ms(m_pgmEnv.SRM_RunTimer) > 3000) //3초이상이 흐르면
 		{
-			++s_Brake_Release_Retry;
-			if (s_Brake_Release_Retry > nDef_Error_Brake_Release_Retry)
+			++s_Brake_Release_Retry; // 리트라이 횟수 증가
+			if (s_Brake_Release_Retry > nDef_Error_Brake_Release_Retry) //에러횟수보다 리트라이 횟수가 크면
 			{
-				s_Brake_Release_Retry = 0;
+				s_Brake_Release_Retry = 0; // 리트라이 횟수를 초기화 한다
 
 				// 80-1 브레이크 해제 이상
 				save_error_code(ERROR1_WORK_TIMEOUT, 1, nFlag);
 				m_pgmEnv.SRM_RunMode = RUN_SEQ_ERROR_TRAV_LIFF_STOP;
 			}
-			else
+			else// 정상이면
 			{
-				if ((nFlag & cbits[0]) == 0)
+				if ((nFlag & cbits[0]) == 0) //주행 브레이크 해제인경우
 				{
-					Motor_Brake_Enable(INV_TRAVEL);
+					Motor_Brake_Enable(INV_TRAVEL);// 주행 브레이크 해제 ON
 				}
 
-				if ((nFlag & cbits[1]) == 0)
+				if ((nFlag & cbits[1]) == 0) // 승강 브레이크 해제인 경우
 				{
-					Motor_Brake_Enable(INV_HOIST);
+					Motor_Brake_Enable(INV_HOIST); //승강브레이크 해제 ON
 				}
 
 				m_pgmEnv.SRM_RunTimer = m_pgmEnv.timer1ms;
-				m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1;
+				m_pgmEnv.SRM_RunMode = RUN_SEQ_PREPARE_MOVE_BRAKE_RELEASE_1; //브레이크개방 이전 시퀀스 반환
 			}
 		}
 		else
